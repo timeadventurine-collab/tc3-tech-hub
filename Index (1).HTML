@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TC3 TECH-HUB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #050a14; color: white; }
+        .text-gradient { background: linear-gradient(to right, #3b82f6, #8b5cf6, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .modal-active { overflow: hidden; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); }
+        .dropdown-menu { transform-origin: top right; transition: all 0.2s ease-out; }
+        .hidden-dropdown { transform: scale(0.95); opacity: 0; pointer-events: none; }
+        .visible-dropdown { transform: scale(1); opacity: 1; pointer-events: auto; }
+        .avatar-option.selected { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); transform: scale(1.1); }
+
+        /* --- CSS MỚI CHO KHO SẢN PHẨM --- */
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; padding: 2rem 0; }
+        .product-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; padding: 1.5rem; transition: all 0.3s; position: relative; overflow: hidden; height: 100%; }
+        .product-card:hover { border-color: #3b82f6; transform: translateY(-5px); }
+        
+        .blur-max { filter: blur(15px); pointer-events: none; user-select: none; opacity: 0.4; }
+        .lock-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; items-center: center; justify-content: center; z-index: 20; background: rgba(5, 10, 20, 0.7); backdrop-filter: blur(2px); text-align: center; padding: 20px; }
+        
+        .search-results { position: absolute; top: 100%; left: 0; right: 0; background: #0f172a; border: 1px solid #334155; border-radius: 0.75rem; margin-top: 0.5rem; z-index: 100; max-height: 250px; overflow-y: auto; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .search-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #1e293b; transition: all 0.2s; text-align: left; font-size: 0.875rem; }
+        .search-item:hover { background: #1e3a8a; color: #60a5fa; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative">
+
+    <header id="header-guest" class="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-md border-b border-white/5 transition-all">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="renderGuestHome()">
+                <div class="bg-blue-600 p-1.5 rounded-md"><i class="fa-solid fa-microchip"></i></div>
+                <span class="font-bold text-xl">TC3 TECH-HUB</span>
+            </div>
+            <nav class="hidden md:flex space-x-8">
+                <a href="#" onclick="renderGuestHome()" class="hover:text-blue-400 font-medium">Trang chủ</a>
+                <a href="#" onclick="renderProductStore()" class="text-slate-400 hover:text-white transition-colors">Kho dự án</a>
+                <a href="#" class="text-slate-400 hover:text-white transition-colors">Bảng xếp hạng</a>
+            </nav>
+            <div class="flex gap-3">
+                <button onclick="showSection('login-section')" class="px-4 py-2 hover:text-blue-400 font-medium">Log in</button>
+                <button onclick="showSection('register-section')" class="bg-blue-700 px-5 py-2 rounded-full hover:bg-blue-600 transition-all font-bold shadow-lg shadow-blue-900/20">Register</button>
+            </div>
+        </div>
+    </header>
+
+    <header id="header-user" class="fixed top-0 w-full z-50 bg-slate-950/90 backdrop-blur-md border-b border-blue-900/30 hidden">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="showSection('user-dashboard')">
+                <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-1.5 rounded-md"><i class="fa-solid fa-layer-group"></i></div>
+                <span class="font-bold text-xl">TC3 MEMBER</span>
+            </div>
+            
+            <nav class="hidden md:flex space-x-6 text-sm font-medium">
+                <a href="#" class="text-blue-400 border-b-2 border-blue-500 pb-1">Dự án của tôi</a>
+                <a href="#" onclick="renderProductStore()" class="text-slate-300 hover:text-white transition-colors">Kho dự án</a>
+                <a href="#" class="text-slate-300 hover:text-white transition-colors">Cộng đồng</a>
+                <a href="#" class="text-slate-300 hover:text-white transition-colors">Thi đua rèn luyện</a>
+                <a href="#" class="text-slate-300 hover:text-white transition-colors">Đội nhóm</a>
+            </nav>
+
+            <div class="relative">
+                <button onclick="toggleDropdown()" class="flex items-center gap-3 focus:outline-none p-1 rounded-full hover:bg-white/5 transition-all pr-4 border border-transparent hover:border-white/10">
+                    <img id="header-avatar" src="" alt="User" class="w-9 h-9 rounded-full object-cover border-2 border-blue-500">
+                    <span id="header-username" class="font-semibold text-sm hidden sm:block">User</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                </button>
+
+                <div id="user-dropdown" class="absolute right-0 mt-3 w-56 bg-[#0f172a] rounded-xl shadow-2xl border border-slate-700 hidden-dropdown dropdown-menu overflow-hidden">
+                    <div class="px-4 py-3 border-b border-slate-700/50 bg-slate-800/50">
+                        <p class="text-xs text-slate-400 uppercase tracking-wider">Tài khoản</p>
+                        <p id="dropdown-name" class="font-bold text-white truncate">Minh Quân</p>
+                    </div>
+                    <ul class="py-1">
+                        <li>
+                            <button onclick="openProfilePage()" class="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/10 hover:text-blue-400 flex items-center gap-3 transition-colors">
+                                <i class="fa-regular fa-id-card"></i> Thông tin người dùng
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="confirmLogout()" class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-3 transition-colors">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow pt-24 pb-10 relative w-full">
+        
+        <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[100px]"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-900/10 rounded-full blur-[100px]"></div>
+        </div>
+
+        <div id="guest-home" class="max-w-4xl mx-auto px-4 text-center w-full section-content">
+            <div class="space-y-8 animate-[fadeIn_0.5s_ease-out]">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-900/10 text-blue-400 text-xs font-semibold uppercase tracking-wider">
+                    <i class="fa-regular fa-star"></i> Mạng lưới kết nối đam mê
+                </div>
+                <h1 class="text-5xl md:text-7xl font-black text-white leading-tight">
+                    Nơi Biến Ý Tưởng Thành <br><span class="text-gradient">Sản Phẩm Thực Tế</span>
+                </h1>
+                <p class="text-slate-400 text-lg max-w-2xl mx-auto">
+                    Chào mừng bạn đến với Kho Tàng Số. Hãy khám phá các dự án sáng tạo và tham gia cùng cộng đồng TC3.
+                </p>
+                <div class="flex justify-center gap-4 mt-8">
+                    <button onclick="renderProductStore()" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2">
+                        Tham gia ngay <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="product-store" class="hidden w-full max-w-7xl mx-auto px-6 section-content pb-20 pt-10">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
+                <div class="text-left">
+                    <h2 class="text-4xl font-extrabold text-white">Kho Dự Án <span class="text-blue-500">TC3</span></h2>
+                    <p class="text-slate-400 mt-2">Dưới đây là các sản phẩm tiêu biểu của học sinh 11A1.</p>
+                </div>
+                
+                <div class="relative w-full md:w-96">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input type="text" id="product-search" oninput="handleSearchInput(this.value)" onkeypress="handleSearchEnter(event)"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" 
+                            placeholder="Tìm tên dự án hoặc công nghệ...">
+                    </div>
+                    <div id="search-suggestions" class="search-results"></div>
+                </div>
+            </div>
+
+            <div id="product-display-grid" class="product-grid">
+                </div>
+        </div>
+
+        <div id="login-section" class="hidden max-w-md w-full mx-auto bg-[#0f172a] p-8 rounded-2xl border border-slate-800 shadow-2xl section-content relative">
+            <button onclick="renderGuestHome()" class="absolute top-4 right-4 text-slate-500 hover:text-white"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            <h2 class="text-2xl font-bold mb-2 text-white">Chào mừng trở lại</h2>
+            <p class="text-slate-400 text-sm mb-6">Vui lòng đăng nhập để tiếp tục.</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 ml-1">Tên đăng nhập / Email</label>
+                    <input type="text" id="login-user" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 ml-1">Mật khẩu</label>
+                    <input type="password" id="login-pass" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg mt-2">Đăng Nhập</button>
+            </div>
+            <div class="mt-6 text-center text-sm text-slate-500">
+                Chưa có tài khoản? <button onclick="showSection('register-section')" class="text-blue-400 hover:text-blue-300 font-semibold">Đăng ký ngay</button>
+            </div>
+        </div>
+
+        <div id="register-section" class="hidden max-w-md w-full mx-auto bg-[#0f172a] p-8 rounded-2xl border border-slate-800 shadow-2xl section-content relative">
+            <button onclick="renderGuestHome()" class="absolute top-4 right-4 text-slate-500 hover:text-white"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            <h2 class="text-2xl font-bold mb-2 text-white">Tạo tài khoản mới</h2>
+            <p class="text-slate-400 text-sm mb-6">Nhập thông tin để gia nhập cộng đồng.</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 ml-1">Tên hiển thị</label>
+                    <input type="text" id="reg-user" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 ml-1">Email liên kết</label>
+                    <input type="email" id="reg-email" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 ml-1">Mật khẩu</label>
+                    <input type="password" id="reg-pass" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                </div>
+                <button onclick="handleRegister()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg mt-2">Đăng Ký</button>
+            </div>
+        </div>
+
+        <div id="user-dashboard" class="hidden w-full h-full flex items-center justify-center section-content">
+            <div class="text-center opacity-50">
+                <i class="fa-solid fa-code text-6xl text-slate-700 mb-4"></i>
+                <p class="text-slate-500">Chào mừng quay trở lại hệ thống!</p>
+            </div>
+        </div>
+
+        <div id="profile-page" class="hidden w-full max-w-4xl mx-auto px-4 py-8 section-content">
+            <div class="bg-[#0f172a] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+                <div class="h-32 bg-gradient-to-r from-blue-900 to-purple-900 relative">
+                    <button onclick="showSection('user-dashboard')" class="absolute top-4 left-4 bg-black/30 hover:bg-black/50 text-white px-3 py-1 rounded-lg backdrop-blur-sm text-sm transition-all">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Quay lại
+                    </button>
+                </div>
+                <div class="px-8 pb-8">
+                    <div class="relative -mt-12 mb-6 flex flex-col md:flex-row items-end md:items-center gap-6">
+                        <img id="profile-current-avatar" src="" class="w-24 h-24 rounded-full border-4 border-[#0f172a] bg-slate-800 shadow-xl object-cover">
+                        <div class="flex-1">
+                            <h2 class="text-2xl font-bold text-white">Chỉnh sửa hồ sơ</h2>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="md:col-span-1 space-y-4">
+                            <h3 class="font-semibold text-slate-300 border-b border-slate-800 pb-2">Chọn Avatar</h3>
+                            <div class="grid grid-cols-3 gap-3" id="avatar-grid"></div>
+                        </div>
+                        <div class="md:col-span-2 space-y-4">
+                            <div>
+                                <label class="text-xs text-slate-500 uppercase font-bold">Tên người dùng</label>
+                                <input type="text" id="edit-name" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-white mt-1 focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-500 uppercase font-bold">Email</label>
+                                <input type="email" id="edit-email" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-white mt-1 focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+    <label class="text-xs text-slate-500 uppercase font-bold">Mật khẩu mới</label>
+    <input type="password" id="edit-password"
+        placeholder="Để trống nếu không đổi"
+        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-white mt-1 focus:border-blue-500 outline-none">
+</div>
+
+<div>
+    <label class="text-xs text-slate-500 uppercase font-bold">Xác nhận mật khẩu</label>
+    <input type="password" id="edit-password-confirm"
+        placeholder="Nhập lại mật khẩu"
+        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-white mt-1 focus:border-blue-500 outline-none">
+</div>
+                            <div class="pt-4 flex justify-end gap-3">
+                                <button onclick="preSaveCheck()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold shadow-lg transition-all">Lưu thay đổi</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer id="main-footer" class="border-t border-slate-800/50 bg-[#03060d] py-6 mt-auto">
+        <div class="text-center text-xs text-slate-600 tracking-widest uppercase">
+            © 2024 TC3 TECH-HUB. Developed by 11A1.
+        </div>
+    </footer>
+
+    <div id="logout-modal" class="fixed inset-0 z-[60] flex items-center justify-center hidden">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal('logout-modal')"></div>
+        <div class="bg-[#1e293b] rounded-xl p-6 max-w-sm w-full mx-4 relative z-10 border border-slate-700 shadow-2xl">
+            <div class="text-center">
+                <h3 class="text-lg font-bold text-white mb-2">Bạn muốn đăng xuất?</h3>
+                <div class="flex gap-3 justify-center mt-6">
+                    <button onclick="closeModal('logout-modal')" class="px-4 py-2 bg-slate-700 text-white rounded-lg">Hủy</button>
+                    <button onclick="performLogout()" class="px-4 py-2 bg-red-600 text-white rounded-lg">Đồng ý</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="save-modal" class="fixed inset-0 z-[60] flex items-center justify-center hidden">
+        <div class="modal-overlay absolute inset-0"></div>
+        <div class="bg-[#1e293b] rounded-xl p-6 max-w-sm w-full mx-4 relative z-10 border border-slate-700 shadow-2xl text-center">
+            <h3 class="text-lg font-bold text-white mb-4">Xác nhận lưu thay đổi?</h3>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal('save-modal')" class="px-4 py-2 bg-slate-700 text-white rounded-lg">Hủy</button>
+                <button onclick="performSaveProfile()" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-24 right-5 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-lg shadow-xl transform translate-x-[150%] transition-transform duration-300 z-[70] flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-green-400"></i>
+        <span id="toast-msg">Thông báo</span>
+    </div>
+
+    <script>
+        const AVATARS = [
+            'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+            'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
+            'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob',
+            'https://api.dicebear.com/7.x/avataaars/svg?seed=Jack',
+            'https://api.dicebear.com/7.x/avataaars/svg?seed=Milo',
+            'https://api.dicebear.com/7.x/avataaars/svg?seed=Saitama'
+        ];
+
+        // --- DỮ LIỆU SẢN PHẨM MẪU ---
+        const SAMPLE_PRODUCTS = [
+            { id: 1, name: "Web Portfolio Cá Nhân", category: "Phát triển Web", desc: "Trang web giới thiệu bản thân cực đẹp với hiệu ứng chuyển động.", tech: "HTML, CSS, JS" },
+            { id: 2, name: "App Ghi Chú Thông Minh", category: "Ứng dụng", desc: "Ứng dụng giúp bạn quản lý công việc và ghi chú hằng ngày.", tech: "ReactJS, Firebase" },
+            { id: 3, name: "Hệ Thống Nhà Thông Minh", category: "IoT", desc: "Điều khiển đèn và thiết bị trong nhà qua điện thoại.", tech: "Arduino, ESP32" },
+            { id: 4, name: "Robot Tự Hành Tránh Vật Cản", category: "Phần cứng", desc: "Xe robot tự động tìm đường đi trong mê cung.", tech: "C++, Arduino" },
+            { id: 5, name: "Chatbot AI Hỗ Trợ Học Tập", category: "Trí tuệ nhân tạo", desc: "Robot trả lời câu hỏi bài tập tự động dựa trên GPT.", tech: "Python, OpenAI" },
+            { id: 6, name: "Game 2D Vượt Chướng Ngại Vật", category: "Trò chơi", desc: "Trò chơi giải trí vui nhộn với nhiều cấp độ khó khác nhau.", tech: "Unity, C#" }
+        ];
+        
+        let tempSelectedAvatar = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginState();
+        });
+
+        function showSection(id) {
+            document.querySelectorAll('.section-content').forEach(el => el.classList.add('hidden'));
+            const target = document.getElementById(id);
+            if(target) target.classList.remove('hidden');
+            
+            document.getElementById('user-dropdown').classList.add('hidden-dropdown');
+            document.getElementById('user-dropdown').classList.remove('visible-dropdown');
+
+            // Nếu vào kho sản phẩm, render lại nội dung
+            if(id === 'product-store') renderProducts();
+        }
+
+        // --- CHỨC NĂNG KHO SẢN PHẨM & TÌM KIẾM ---
+        function renderProductStore() {
+            showSection('product-store');
+        }
+
+        function renderProducts(filterData = SAMPLE_PRODUCTS) {
+            const grid = document.getElementById('product-display-grid');
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            grid.innerHTML = '';
+
+            filterData.forEach((p, index) => {
+                const isLocked = !currentUser && index >= 2; // Hiển thị 2, mờ từ cái thứ 3
+                
+                const card = document.createElement('div');
+                card.className = `product-card group ${isLocked ? 'relative' : ''}`;
+                
+                card.innerHTML = `
+                    <div class="${isLocked ? 'blur-max' : ''}">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded-full uppercase">${p.category}</span>
+                            <i class="fa-solid fa-code text-slate-700"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mt-1 group-hover:text-blue-400 transition-colors">${p.name}</h3>
+                        <p class="text-slate-400 text-sm mt-2 line-clamp-2">${p.desc}</p>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <span class="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded">${p.tech}</span>
+                        </div>
+                        <button class="w-full mt-6 py-2 border border-slate-700 rounded-lg text-sm text-slate-300 group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white transition-all">Xem chi tiết</button>
+                    </div>
+                    ${isLocked ? `
+                        <div class="lock-overlay">
+                            <div class="bg-blue-600/20 w-12 h-12 rounded-full flex items-center justify-center mb-3">
+                                <i class="fa-solid fa-lock text-blue-500"></i>
+                            </div>
+                            <p class="text-sm font-bold text-white px-4">Đăng nhập để xem sâu hơn</p>
+                            <p class="text-[10px] text-slate-400 mt-1 mb-4">Gia nhập TC3 để khám phá 100+ dự án</p>
+                            <button onclick="showSection('login-section')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-full font-bold transition-all shadow-lg">
+                                Đăng nhập ngay
+                            </button>
+                        </div>
+                    ` : ''}
+                `;
+                
+                if (!isLocked) {
+                    card.onclick = () => showToast(`Bạn đang xem: ${p.name}`);
+                }
+                grid.appendChild(card);
+            });
+        }
+
+        // --- LOGIC TÌM KIẾM ---
+        function handleSearchInput(val) {
+            const suggestionBox = document.getElementById('search-suggestions');
+            if (!val) {
+                suggestionBox.style.display = 'none';
+                return;
+            }
+
+            const matched = SAMPLE_PRODUCTS.filter(p => 
+                p.name.toLowerCase().includes(val.toLowerCase()) || 
+                p.tech.toLowerCase().includes(val.toLowerCase())
+            );
+            
+            if (matched.length > 0) {
+                suggestionBox.innerHTML = matched.map(p => `
+                    <div class="search-item" onclick="selectSearchItem('${p.name}')">
+                        <div class="font-bold">${p.name}</div>
+                        <div class="text-[10px] text-slate-500">${p.category} • ${p.tech}</div>
+                    </div>
+                `).join('');
+                suggestionBox.style.display = 'block';
+            } else {
+                suggestionBox.innerHTML = '<div class="p-4 text-slate-500 text-sm italic">Không tìm thấy sản phẩm nào...</div>';
+                suggestionBox.style.display = 'block';
+            }
+        }
+
+        function selectSearchItem(name) {
+            document.getElementById('product-search').value = name;
+            document.getElementById('search-suggestions').style.display = 'none';
+            const selected = SAMPLE_PRODUCTS.filter(p => p.name === name);
+            renderProducts(selected);
+        }
+
+        function handleSearchEnter(e) {
+            if (e.key === 'Enter') {
+                const val = e.target.value.toLowerCase();
+                const results = SAMPLE_PRODUCTS.filter(p => 
+                    p.name.toLowerCase().includes(val) || 
+                    p.tech.toLowerCase().includes(val) ||
+                    p.category.toLowerCase().includes(val)
+                );
+                renderProducts(results);
+                document.getElementById('search-suggestions').style.display = 'none';
+                if(results.length === 0) showToast("Không tìm thấy kết quả phù hợp");
+            }
+        }
+
+        // --- CÁC CHỨC NĂNG HỆ THỐNG CŨ (GIỮ NGUYÊN & CẬP NHẬT) ---
+        function checkLoginState() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser) {
+                renderUserInterface(currentUser);
+            } else {
+                renderGuestHome();
+            }
+        }
+
+        function renderGuestHome() {
+            document.getElementById('header-guest').classList.remove('hidden');
+            document.getElementById('header-user').classList.add('hidden');
+            document.getElementById('main-footer').classList.remove('hidden');
+            showSection('guest-home');
+        }
+
+        function handleLogin() {
+            const userInp = document.getElementById('login-user').value;
+            const passInp = document.getElementById('login-pass').value;
+            const savedData = JSON.parse(localStorage.getItem('savedUser'));
+
+            if (savedData && (userInp === savedData.username || userInp === savedData.email) && passInp === savedData.password) {
+                localStorage.setItem('currentUser', JSON.stringify(savedData));
+                showToast('Đăng nhập thành công!');
+                renderUserInterface(savedData);
+                renderProducts(); // Update lại trạng thái mờ của sản phẩm
+            } else {
+                alert("Thông tin đăng nhập không chính xác!");
+            }
+        }
+
+        function handleRegister() {
+            const user = document.getElementById('reg-user').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-pass').value;
+
+            if(user && email && pass) {
+                const userData = { username: user, email: email, password: pass, avatar: AVATARS[0] };
+                localStorage.setItem('savedUser', JSON.stringify(userData));
+                showToast('Đăng ký thành công!');
+                setTimeout(() => showSection('login-section'), 1000);
+            } else {
+                alert("Vui lòng nhập đủ thông tin!");
+            }
+        }
+
+        function renderUserInterface(userData) {
+            document.getElementById('header-guest').classList.add('hidden');
+            document.getElementById('header-user').classList.remove('hidden');
+            document.getElementById('header-username').textContent = userData.username;
+            document.getElementById('header-avatar').src = userData.avatar;
+            document.getElementById('dropdown-name').textContent = userData.username;
+            document.getElementById('main-footer').classList.add('hidden');
+            showSection('user-dashboard');
+        }
+
+        function toggleDropdown() {
+            const dd = document.getElementById('user-dropdown');
+            dd.classList.toggle('hidden-dropdown');
+            dd.classList.toggle('visible-dropdown');
+        }
+
+        function openProfilePage() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (!currentUser) return;
+            document.getElementById('edit-name').value = currentUser.username;
+            document.getElementById('edit-email').value = currentUser.email;
+            document.getElementById('profile-current-avatar').src = currentUser.avatar;
+            tempSelectedAvatar = currentUser.avatar;
+
+            const grid = document.getElementById('avatar-grid');
+            grid.innerHTML = '';
+            AVATARS.forEach(url => {
+                const img = document.createElement('img');
+                img.src = url;
+                img.className = `w-14 h-14 rounded-full cursor-pointer border-2 transition-all avatar-option ${url === currentUser.avatar ? 'selected border-blue-500' : 'border-transparent'}`;
+                img.onclick = () => {
+                    document.querySelectorAll('.avatar-option').forEach(el => el.classList.replace('selected', 'border-transparent'));
+                    img.classList.replace('border-transparent', 'selected');
+                    img.classList.add('border-blue-500');
+                    document.getElementById('profile-current-avatar').src = url;
+                    tempSelectedAvatar = url;
+                };
+                grid.appendChild(img);
+            });
+            showSection('profile-page');
+        }
+
+        function preSaveCheck() { document.getElementById('save-modal').classList.remove('hidden'); }
+
+        function performSaveProfile() {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+    const newPassword = document.getElementById('edit-password').value;
+    const confirmPassword = document.getElementById('edit-password-confirm').value;
+
+    // Nếu người dùng có nhập mật khẩu
+    if (newPassword || confirmPassword) {
+        if (newPassword.length < 6) {
+            alert("Mật khẩu phải có ít nhất 6 ký tự");
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            alert("Mật khẩu xác nhận không khớp");
+            return;
+        }
+    }
+
+    const updatedUser = {
+        ...currentUser,
+        username: document.getElementById('edit-name').value,
+        email: document.getElementById('edit-email').value,
+        avatar: tempSelectedAvatar,
+        password: newPassword ? newPassword : currentUser.password
+    };
+
+    localStorage.setItem('savedUser', JSON.stringify(updatedUser));
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+    // Clear input mật khẩu sau khi lưu
+    document.getElementById('edit-password').value = '';
+    document.getElementById('edit-password-confirm').value = '';
+
+    closeModal('save-modal');
+    showToast('Cập nhật hồ sơ thành công!');
+    renderUserInterface(updatedUser);
+}
+
+
+        function confirmLogout() { document.getElementById('logout-modal').classList.remove('hidden'); }
+        function performLogout() {
+            localStorage.removeItem('currentUser');
+            closeModal('logout-modal');
+            renderGuestHome();
+            showToast('Đã đăng xuất.');
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = message;
+            toast.classList.remove('translate-x-[150%]');
+            setTimeout(() => toast.classList.add('translate-x-[150%]'), 3000);
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.relative') && !event.target.closest('#user-dropdown')) {
+                document.getElementById('user-dropdown').classList.add('hidden-dropdown');
+                document.getElementById('user-dropdown').classList.remove('visible-dropdown');
+            }
+        }
+    </script>
+    <script src="my-projects.js"></script>
+</body>
+</html>
