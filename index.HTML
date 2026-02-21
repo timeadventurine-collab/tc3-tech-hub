@@ -6,86 +6,1078 @@
     <title>TC3 TECH-HUB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #050a14; color: white; }
-        .text-gradient { background: linear-gradient(to right, #3b82f6, #8b5cf6, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .modal-active { overflow: hidden; }
-        .modal-overlay { background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); }
-        .dropdown-menu { transform-origin: top right; transition: all 0.2s ease-out; }
-        .hidden-dropdown { transform: scale(0.95); opacity: 0; pointer-events: none; }
-        .visible-dropdown { transform: scale(1); opacity: 1; pointer-events: auto; }
-        .avatar-option.selected { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); transform: scale(1.1); }
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 
-        /* --- CSS MỚI CHO KHO SẢN PHẨM --- */
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; padding: 2rem 0; }
-        .product-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; padding: 1.5rem; transition: all 0.3s; position: relative; overflow: hidden; height: 100%; }
-        .product-card:hover { border-color: #3b82f6; transform: translateY(-5px); }
-        
-        .blur-max { filter: blur(15px); pointer-events: none; user-select: none; opacity: 0.4; }
-        .lock-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; items-center: center; justify-content: center; z-index: 20; background: rgba(5, 10, 20, 0.7); backdrop-filter: blur(2px); text-align: center; padding: 20px; }
-        
-        .search-results { position: absolute; top: 100%; left: 0; right: 0; background: #0f172a; border: 1px solid #334155; border-radius: 0.75rem; margin-top: 0.5rem; z-index: 100; max-height: 250px; overflow-y: auto; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .search-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #1e293b; transition: all 0.2s; text-align: left; font-size: 0.875rem; }
-        .search-item:hover { background: #1e3a8a; color: #60a5fa; }
+    <style>
+        /* ===== ROOT VARIABLES ===== */
+        :root {
+            --blue: #3b82f6;
+            --purple: #8b5cf6;
+            --pink: #d946ef;
+            --glow-blue: rgba(59,130,246,0.35);
+            --glow-purple: rgba(139,92,246,0.25);
+            --bg-deep: #050a14;
+            --bg-card: #0f172a;
+            --border: rgba(255,255,255,0.07);
+        }
+
+        /* ===== BASE ===== */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-deep);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .font-display { font-family: 'Syne', sans-serif; }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #d946ef);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .text-gradient-subtle {
+            background: linear-gradient(90deg, #93c5fd, #c4b5fd);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* ===== BACKGROUND GRID ===== */
+        .bg-grid {
+            background-image:
+                linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* ===== NOISE TEXTURE ===== */
+        .noise::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.4;
+        }
+
+        /* ===== HEADER ===== */
+        #header-user nav a {
+            position: relative;
+            transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+            padding-bottom: 4px;
+        }
+        #header-user nav a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, var(--blue), var(--purple));
+            border-radius: 4px;
+            transition: width 0.35s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 0 8px var(--glow-blue);
+        }
+        #header-user nav a:hover {
+            color: #93c5fd;
+            text-shadow: 0 0 20px var(--glow-blue);
+            transform: translateY(-1px);
+        }
+        #header-user nav a:hover::after { width: 100%; }
+        #header-user nav a.active-nav {
+            color: var(--blue);
+        }
+        #header-user nav a.active-nav::after { width: 100%; }
+
+        /* Header glow on hover for buttons */
+        .header-btn-glow {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .header-btn-glow:hover {
+            box-shadow: 0 0 20px var(--glow-blue), 0 0 40px rgba(59,130,246,0.15);
+        }
+
+        /* ===== PRODUCT GRID ===== */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            padding: 0.5rem 0;
+        }
+
+        /* ===== PRODUCT CARD ===== */
+        .product-card {
+            background: linear-gradient(145deg, #0f172a, #0a1120);
+            border: 1px solid rgba(59,130,246,0.12);
+            border-radius: 16px;
+            padding: 1.25rem;
+            transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+            position: relative;
+            overflow: hidden;
+        }
+        .product-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(59,130,246,0.05), rgba(139,92,246,0.05));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            border-radius: 16px;
+        }
+        .product-card:hover {
+            border-color: rgba(59,130,246,0.4);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(59,130,246,0.1);
+        }
+        .product-card:hover::before { opacity: 1; }
+
+        /* ===== LOCK OVERLAY ===== */
+        .lock-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            background: rgba(5,10,20,0.7);
+            backdrop-filter: blur(2px);
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* ===== SECTION ANIMATIONS ===== */
+        .section-content { animation: fadeSlideUp 0.5s ease-out both; }
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(3deg); }
+        }
+        @keyframes floatReverse {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(-4deg); }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px var(--glow-blue); }
+            50% { box-shadow: 0 0 40px var(--glow-blue), 0 0 80px var(--glow-purple); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes blink-cursor {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        @keyframes orbit {
+            from { transform: rotate(0deg) translateX(60px) rotate(0deg); }
+            to { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
+        }
+
+        .float-anim { animation: float 6s ease-in-out infinite; }
+        .float-anim-2 { animation: floatReverse 8s ease-in-out infinite; }
+        .float-anim-3 { animation: float 10s ease-in-out infinite 2s; }
+
+        /* ===== WELCOME SCREEN ===== */
+        .welcome-card {
+            background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,17,32,0.98));
+            border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 0 60px rgba(59,130,246,0.08), 0 40px 80px rgba(0,0,0,0.4);
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+
+        .welcome-badge {
+            background: linear-gradient(90deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15));
+            border: 1px solid rgba(59,130,246,0.3);
+            border-radius: 50px;
+            padding: 6px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #93c5fd;
+        }
+
+        .welcome-stat-card {
+            background: rgba(59,130,246,0.07);
+            border: 1px solid rgba(59,130,246,0.15);
+            border-radius: 12px;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+        }
+        .welcome-stat-card:hover {
+            background: rgba(59,130,246,0.12);
+            border-color: rgba(59,130,246,0.3);
+            transform: scale(1.03);
+        }
+
+        .deco-ring {
+            border: 1px solid rgba(59,130,246,0.15);
+            border-radius: 50%;
+            position: absolute;
+        }
+
+        /* ===== UPLOAD BOX ===== */
+        .upload-box {
+            border: 2px dashed rgba(59,130,246,0.3);
+            border-radius: 20px;
+            transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(59,130,246,0.05), rgba(139,92,246,0.05));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        .upload-box:hover {
+            border-color: rgba(59,130,246,0.7);
+            background: rgba(59,130,246,0.06);
+            box-shadow: 0 0 30px rgba(59,130,246,0.1), inset 0 0 30px rgba(59,130,246,0.03);
+        }
+        .upload-box:hover::before { opacity: 1; }
+
+        .plus-btn {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 50%;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 0 20px rgba(59,130,246,0.4);
+        }
+        .plus-btn:hover {
+            transform: scale(1.1) rotate(45deg);
+            box-shadow: 0 0 40px rgba(59,130,246,0.6), 0 0 80px rgba(139,92,246,0.3);
+        }
+
+        /* ===== LOADING OVERLAY ===== */
+        #upload-loading-overlay {
+            background: rgba(5,10,20,0.97);
+            backdrop-filter: blur(20px);
+        }
+        .loading-ring {
+            width: 80px;
+            height: 80px;
+            border: 3px solid rgba(59,130,246,0.1);
+            border-top-color: var(--blue);
+            border-right-color: var(--purple);
+            border-radius: 50%;
+            animation: spin-slow 1s linear infinite;
+        }
+        .loading-progress {
+            background: linear-gradient(90deg, var(--blue), var(--purple), var(--pink), var(--blue));
+            background-size: 200% 100%;
+            animation: shimmer 2s linear infinite;
+            border-radius: 50px;
+            height: 3px;
+        }
+
+        /* ===== PREVIEW MODAL ===== */
+        #preview-modal {
+            background: rgba(5,10,20,0.95);
+            backdrop-filter: blur(30px);
+        }
+        .preview-panel {
+            background: linear-gradient(145deg, #0f172a, #080f1d);
+            border: 1px solid rgba(59,130,246,0.15);
+            border-radius: 20px;
+        }
+        .demo-frame {
+            background: linear-gradient(135deg, #080f1d, #0a1020);
+            border: 1px solid rgba(59,130,246,0.1);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .thumbnail-upload-zone {
+            border: 2px dashed rgba(59,130,246,0.25);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .thumbnail-upload-zone:hover {
+            border-color: rgba(59,130,246,0.6);
+            background: rgba(59,130,246,0.05);
+        }
+        .upload-btn-main {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 14px;
+            padding: 14px 32px;
+            font-weight: 700;
+            font-size: 15px;
+            transition: all 0.4s ease;
+            box-shadow: 0 0 20px rgba(59,130,246,0.3);
+            border: none;
+            cursor: pointer;
+            color: white;
+        }
+        .upload-btn-main:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 40px rgba(59,130,246,0.5), 0 8px 30px rgba(0,0,0,0.3);
+        }
+        .upload-btn-main:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ===== SUCCESS OVERLAY ===== */
+        #success-overlay {
+            background: rgba(5,10,20,0.97);
+            backdrop-filter: blur(30px);
+        }
+        .success-icon-ring {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 2px solid rgba(34,197,94,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .success-icon-ring::before {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 1px solid rgba(34,197,94,0.1);
+            animation: spin-slow 4s linear infinite;
+        }
+        .success-icon-ring::after {
+            content: '';
+            position: absolute;
+            inset: -16px;
+            border-radius: 50%;
+            border: 1px dashed rgba(34,197,94,0.07);
+            animation: spin-slow 8s linear infinite reverse;
+        }
+        @keyframes successPop {
+            0% { opacity: 0; transform: scale(0.7); }
+            60% { transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .success-pop { animation: successPop 0.5s cubic-bezier(0.4,0,0.2,1) forwards; }
+
+        /* ===== DIVIDER ===== */
+        .gradient-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(59,130,246,0.4), rgba(139,92,246,0.4), transparent);
+        }
+
+        /* ===== SEARCH ===== */
+        .search-results {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: #0f172a;
+            border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 14px;
+            overflow: hidden;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+        }
+        .search-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .search-item:last-child { border-bottom: none; }
+        .search-item:hover { background: rgba(59,130,246,0.1); }
+
+        /* ===== DROPDOWN ===== */
+        .dropdown-menu { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: top right; }
+        .hidden-dropdown { opacity: 0; transform: scale(0.95) translateY(-8px); pointer-events: none; }
+        .visible-dropdown { opacity: 1; transform: scale(1) translateY(0); pointer-events: all; }
+
+        /* ===== MODAL OVERLAYS ===== */
+        .modal-overlay { background: rgba(5, 10, 20, 0.85); backdrop-filter: blur(8px); }
+
+        /* ===== TOAST ===== */
+        #toast {
+            background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,17,32,0.98));
+            border: 1px solid rgba(59,130,246,0.25);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4), 0 0 20px rgba(59,130,246,0.1);
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0f1e; }
+        ::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,0.5); }
+
+        /* ===== INPUT FOCUS ===== */
+        input:focus, textarea:focus {
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+
+        /* ===== GLASS CARD ===== */
+        .glass-card {
+            background: linear-gradient(145deg, rgba(15,23,42,0.8), rgba(8,15,29,0.9));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(59,130,246,0.12);
+        }
+
+        /* ===== GLOW BLOB ===== */
+        .glow-blob {
+            pointer-events: none;
+            filter: blur(80px);
+            border-radius: 50%;
+            position: absolute;
+        }
+    </style>
+
+    <!-- ===== COMMUNITY MODULE STYLES ===== -->
+    <!-- Scoped under .comm-* prefix to avoid ANY conflict with existing styles -->
+    <style>
+        /* ── Community CSS Variables (self-contained) ── */
+        .comm-root {
+            --ca1: #6c63ff;
+            --ca2: #00d4ff;
+            --ca3: #ff6b9d;
+            --ca4: #ffd166;
+            --cgreen: #06ffa5;
+            --cglass: rgba(255,255,255,0.04);
+            --cborder: rgba(255,255,255,0.08);
+            --cborder2: rgba(255,255,255,0.14);
+            --cmuted: #6b7280;
+            --ctext: #e8eaf0;
+            --cr: 16px;
+            --cr2: 12px;
+            --cshadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        /* ── Community section wrapper ── */
+        #community-section {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px 40px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* ── Community sub-views ── */
+        .comm-view { display: none; animation: commFadeSlide .35s ease; }
+        .comm-view.comm-active { display: block; }
+        @keyframes commFadeSlide {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Community hover dropdown on nav link ── */
+        .comm-nav-wrap { position: relative; display: inline-block; }
+        .comm-nav-wrap .comm-dropdown {
+            position: absolute; top: calc(100% + 10px); left: 50%;
+            transform: translateX(-50%);
+            width: 300px; padding: 14px;
+            background: rgba(10,15,28,0.97);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 50px rgba(108,99,255,0.12);
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            z-index: 999;
+            animation: commPopIn .2s ease;
+        }
+        @keyframes commPopIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(.97); }
+            to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+        }
+        .comm-nav-wrap:hover .comm-dropdown { display: grid; }
+        .comm-dd-item {
+            padding: 12px; border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.07);
+            cursor: pointer; transition: all .2s;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .comm-dd-item:hover {
+            background: rgba(108,99,255,0.12);
+            border-color: rgba(108,99,255,0.4);
+            transform: translateY(-2px);
+        }
+        .comm-dd-icon { font-size: 1.3rem; }
+        .comm-dd-label { font-size: 0.78rem; font-weight: 700; color: #e8eaf0; }
+        .comm-dd-desc  { font-size: 0.68rem; color: #6b7280; }
+
+        /* ── Section header ── */
+        .comm-section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 20px; padding-top: 8px;
+        }
+        .comm-section-title {
+            font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800;
+            background: linear-gradient(135deg, #e8eaf0, #6b7280);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .comm-badge-live {
+            padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;
+            background: linear-gradient(135deg, rgba(6,255,165,0.15), rgba(0,212,255,0.1));
+            border: 1px solid rgba(6,255,165,0.3); color: #06ffa5;
+            display: flex; align-items: center; gap: 6px;
+            animation: commPulseLive 2s infinite;
+        }
+        .comm-badge-live::before {
+            content: ''; width: 6px; height: 6px; border-radius: 50%;
+            background: #06ffa5; animation: commPulseLive 2s infinite;
+        }
+        @keyframes commPulseLive {
+            0%,100% { box-shadow: 0 0 0 0 rgba(6,255,165,0.4); }
+            50%      { box-shadow: 0 0 0 6px rgba(6,255,165,0); }
+        }
+
+        /* ── Back button ── */
+        .comm-back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 16px; border-radius: 10px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.82rem; font-weight: 600; color: #6b7280;
+            cursor: pointer; transition: all .2s; margin-bottom: 16px;
+        }
+        .comm-back-btn:hover { border-color: rgba(255,255,255,0.2); color: #e8eaf0; }
+
+        /* ── Card ── */
+        .comm-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 20px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            transition: border-color .2s;
+        }
+        .comm-card:hover { border-color: rgba(255,255,255,0.14); }
+        .comm-card-title {
+            font-family: 'Syne', sans-serif; font-size: 0.92rem; font-weight: 700;
+            display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+        }
+        .comm-card-title span {
+            background: linear-gradient(135deg, #6c63ff, #00d4ff);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        /* ── Community 2-col layout ── */
+        .comm-layout {
+            display: grid;
+            grid-template-columns: 310px 1fr;
+            gap: 22px; align-items: start;
+        }
+        @media(max-width: 900px) { .comm-layout { grid-template-columns: 1fr; } }
+
+        /* ── Leaderboard ── */
+        .comm-lb-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px; border-radius: 10px;
+            background: rgba(255,255,255,0.04); margin-bottom: 8px;
+            border: 1px solid transparent; transition: all .2s;
+        }
+        .comm-lb-row:hover { border-color: rgba(255,255,255,0.14); background: rgba(108,99,255,0.07); }
+        .comm-lb-rank {
+            width: 26px; height: 26px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.72rem; font-weight: 800; flex-shrink: 0;
+        }
+        .comm-rank-1 { background: linear-gradient(135deg,#ffd700,#ff8c00); color:#000; }
+        .comm-rank-2 { background: linear-gradient(135deg,#c0c0c0,#a8a8a8); color:#000; }
+        .comm-rank-3 { background: linear-gradient(135deg,#cd7f32,#a0522d); color:#fff; }
+        .comm-rank-other { background: #111827; color: #6b7280; }
+        .comm-lb-ava {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: linear-gradient(135deg,#6c63ff,#00d4ff);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.82rem; font-weight: 700; flex-shrink: 0; overflow: hidden;
+        }
+        .comm-lb-ava img { width:100%; height:100%; object-fit:cover; }
+        .comm-lb-info { flex:1; min-width:0; }
+        .comm-lb-name { font-size: 0.83rem; font-weight: 600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#e8eaf0; }
+        .comm-lb-pts  { font-size: 0.7rem; color: #6b7280; }
+        .comm-lb-badge {
+            font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+            background: linear-gradient(135deg,rgba(108,99,255,0.2),rgba(0,212,255,0.2));
+            border: 1px solid rgba(108,99,255,0.3); color: #00d4ff;
+        }
+
+        /* ── Full Leaderboard ── */
+        .comm-lb-full-row {
+            display: flex; align-items: center; gap: 16px;
+            padding: 15px 18px; border-radius: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 10px; transition: all .2s;
+        }
+        .comm-lb-full-row:hover { border-color: rgba(255,255,255,0.14); transform: translateX(4px); }
+        .comm-lb-full-rank { font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; width:48px; text-align:center; }
+        .comm-rank-gold   { background:linear-gradient(135deg,#ffd700,#ff8c00); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+        .comm-rank-silver { background:linear-gradient(135deg,#e0e0e0,#bdbdbd); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+        .comm-rank-bronze { background:linear-gradient(135deg,#cd7f32,#8b4513); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+        .comm-lb-full-ava {
+            width:50px; height:50px; border-radius:50%;
+            background:linear-gradient(135deg,#6c63ff,#00d4ff);
+            display:flex; align-items:center; justify-content:center;
+            font-weight:700; font-size:1.05rem;
+            border:2px solid rgba(108,99,255,0.3); overflow:hidden; flex-shrink:0;
+        }
+        .comm-lb-full-ava img { width:100%; height:100%; object-fit:cover; }
+        .comm-lb-full-info { flex:1; }
+        .comm-lb-full-name { font-size:0.95rem; font-weight:700; font-family:'Syne',sans-serif; color:#e8eaf0; }
+        .comm-lb-full-sub  { font-size:0.75rem; color:#6b7280; margin-top:2px; }
+        .comm-progress-bar { height:4px; border-radius:2px; background:rgba(255,255,255,0.06); margin-top:6px; overflow:hidden; }
+        .comm-progress-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,#6c63ff,#00d4ff); transition:width .6s ease; }
+        .comm-lb-full-pts { font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:800; background:linear-gradient(135deg,#6c63ff,#00d4ff); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+
+        /* ── Mini Chat ── */
+        .comm-chat-box {
+            height: 260px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 8px;
+            padding: 12px; background: rgba(0,0,0,0.2);
+            border-radius: 12px; margin-bottom: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .comm-chat-msg { display: flex; gap: 8px; animation: commFadeSlide .2s ease; }
+        .comm-chat-msg .cc-ava {
+            width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+            background: linear-gradient(135deg,#6c63ff,#ff6b9d);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.68rem; font-weight: 700; color: #fff;
+        }
+        .comm-chat-msg .cc-body { flex:1; }
+        .comm-chat-msg .cc-name { font-size: 0.68rem; font-weight: 700; color: #00d4ff; margin-bottom: 2px; }
+        .comm-chat-msg .cc-text {
+            font-size: 0.78rem; background: rgba(255,255,255,0.04);
+            padding: 6px 10px; border-radius: 0 8px 8px 8px;
+            border: 1px solid rgba(255,255,255,0.08); line-height: 1.5; word-break: break-word;
+            color: #e8eaf0;
+        }
+        .comm-chat-msg.comm-me .cc-text {
+            background: linear-gradient(135deg,rgba(108,99,255,0.2),rgba(0,212,255,0.1));
+            border-color: rgba(108,99,255,0.3); border-radius: 8px 0 8px 8px;
+        }
+        .comm-chat-input-row { display: flex; gap: 8px; }
+        .comm-chat-input {
+            flex:1; padding: 9px 13px; border-radius: 10px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.83rem; color: #e8eaf0; transition: border-color .2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .comm-chat-input:focus { border-color: #6c63ff; outline: none; }
+        .comm-chat-send {
+            padding: 9px 14px; border-radius: 10px;
+            background: linear-gradient(135deg,#6c63ff,#00d4ff);
+            color: #fff; font-size: 0.83rem; font-weight: 700;
+            border: none; cursor: pointer; transition: all .2s;
+        }
+        .comm-chat-send:hover { opacity: .85; transform: scale(.97); }
+
+        /* ── Full Chat Page ── */
+        .comm-chat-full {
+            max-width: 760px; margin: 0 auto;
+            display: flex; flex-direction: column; height: calc(100vh - 220px);
+        }
+        .comm-chat-full-box {
+            flex:1; overflow-y:auto;
+            display:flex; flex-direction:column; gap:12px;
+            padding:20px; background:rgba(0,0,0,0.2);
+            border-radius:16px 16px 0 0;
+            border:1px solid rgba(255,255,255,0.08); border-bottom:none;
+        }
+        .comm-chat-full-input-row {
+            display:flex; gap:0;
+            background:rgba(10,15,28,0.9);
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:0 0 16px 16px; overflow:hidden;
+            backdrop-filter:blur(20px);
+        }
+        .comm-chat-full-input {
+            flex:1; padding:15px 18px; font-size:0.88rem; color:#e8eaf0;
+            background:transparent; font-family:'Inter',sans-serif;
+        }
+        .comm-chat-full-input:focus { outline:none; }
+        .comm-chat-full-send {
+            padding:12px 22px;
+            background:linear-gradient(135deg,#6c63ff,#00d4ff);
+            color:#fff; font-size:0.88rem; font-weight:700;
+            border:none; cursor:pointer; transition:opacity .2s;
+        }
+        .comm-chat-full-send:hover { opacity:.85; }
+
+        /* ── Post Composer ── */
+        .comm-composer {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 20px; margin-bottom: 20px;
+            backdrop-filter: blur(16px);
+        }
+        .comm-composer-title {
+            font-family: 'Syne',sans-serif; font-size: 0.95rem; font-weight: 700;
+            margin-bottom: 14px; color: #e8eaf0;
+        }
+        .comm-compose-input {
+            width:100%; padding:11px 15px; border-radius:10px;
+            background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08);
+            font-size:0.88rem; color:#e8eaf0; margin-bottom:10px;
+            transition:border-color .2s; font-family:'Inter',sans-serif;
+        }
+        .comm-compose-input:focus  { border-color:#6c63ff; outline:none; }
+        .comm-compose-area {
+            width:100%; padding:11px 15px; border-radius:10px;
+            background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08);
+            font-size:0.85rem; color:#e8eaf0; resize:vertical; min-height:95px;
+            line-height:1.6; margin-bottom:10px; transition:border-color .2s;
+            font-family:'Inter',sans-serif;
+        }
+        .comm-compose-area:focus { border-color:#6c63ff; outline:none; }
+        .comm-compose-code {
+            width:100%; padding:11px 15px; border-radius:10px;
+            background:rgba(0,0,0,0.5); border:1px solid rgba(108,99,255,0.25);
+            font-size:0.78rem; color:#a5b4fc; resize:vertical; min-height:80px;
+            line-height:1.6; margin-bottom:10px; font-family:'Courier New',monospace;
+            transition:border-color .2s; display:none;
+        }
+        .comm-compose-code:focus { border-color:#6c63ff; outline:none; }
+        .comm-tags-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+        .comm-tag-chip {
+            padding:3px 10px; border-radius:20px; font-size:0.72rem; font-weight:600;
+            background:rgba(108,99,255,0.15); border:1px solid rgba(108,99,255,0.3); color:#6c63ff;
+            cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:4px;
+        }
+        .comm-tag-chip:hover { background:rgba(108,99,255,0.3); }
+        .comm-tag-chip .ctrm { opacity:.6; font-size:0.68rem; }
+        .comm-tag-input {
+            flex:1; min-width:110px; padding:3px 11px; border-radius:20px;
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+            font-size:0.78rem; color:#e8eaf0; font-family:'Inter',sans-serif;
+        }
+        .comm-tag-input:focus { outline:none; border-color:#6c63ff; }
+        .comm-toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+        .comm-tool-btn {
+            padding:7px 13px; border-radius:8px; font-size:0.78rem; font-weight:500;
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:#6b7280;
+            cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:5px;
+        }
+        .comm-tool-btn:hover  { border-color:#6c63ff; color:#e8eaf0; background:rgba(108,99,255,0.1); }
+        .comm-tool-btn.comm-active { border-color:#6c63ff; color:#6c63ff; background:rgba(108,99,255,0.1); }
+        .comm-post-btn {
+            padding:9px 22px; border-radius:10px; font-size:0.85rem; font-weight:700;
+            background:linear-gradient(135deg,#6c63ff,#00d4ff);
+            color:#fff; font-family:'Syne',sans-serif; border:none; cursor:pointer;
+            transition:all .25s; box-shadow:0 0 18px rgba(108,99,255,0.3);
+        }
+        .comm-post-btn:hover { opacity:.9; transform:translateY(-1px); box-shadow:0 0 28px rgba(108,99,255,0.5); }
+        .comm-img-preview {
+            width:100%; max-height:170px; object-fit:cover;
+            border-radius:10px; margin-bottom:10px; display:none;
+            border:1px solid rgba(255,255,255,0.08);
+        }
+        .comm-img-preview.show { display:block; }
+
+        /* ── Post Card ── */
+        .comm-post-card {
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+            border-radius:16px; margin-bottom:14px; overflow:hidden;
+            backdrop-filter:blur(16px); transition:border-color .25s,box-shadow .25s;
+            animation:commFadeSlide .3s ease;
+        }
+        .comm-post-card:hover { border-color:rgba(255,255,255,0.14); box-shadow:0 4px 28px rgba(108,99,255,0.1); }
+        .comm-post-head { display:flex; align-items:center; gap:12px; padding:15px 18px 10px; }
+        .comm-post-avatar {
+            width:38px; height:38px; border-radius:50%; flex-shrink:0;
+            background:linear-gradient(135deg,#6c63ff,#ff6b9d);
+            display:flex; align-items:center; justify-content:center;
+            font-weight:700; font-size:0.88rem; overflow:hidden;
+        }
+        .comm-post-avatar img { width:100%; height:100%; object-fit:cover; }
+        .comm-post-meta { flex:1; }
+        .comm-post-author { font-size:0.87rem; font-weight:700; color:#e8eaf0; }
+        .comm-post-time   { font-size:0.7rem; color:#6b7280; }
+        .comm-post-tags-top { display:flex; gap:5px; flex-wrap:wrap; }
+        .comm-p-tag {
+            padding:2px 9px; border-radius:20px; font-size:0.67rem; font-weight:600;
+            background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.2); color:#00d4ff;
+            cursor:pointer; transition:background .2s;
+        }
+        .comm-p-tag:hover { background:rgba(0,212,255,0.2); }
+        .comm-post-body { padding:0 18px 12px; }
+        .comm-post-title { font-size:0.97rem; font-weight:700; font-family:'Syne',sans-serif; margin-bottom:7px; line-height:1.4; color:#e8eaf0; }
+        .comm-post-content { font-size:0.84rem; color:rgba(232,234,240,0.72); line-height:1.7; white-space:pre-wrap; }
+        .comm-post-image { width:100%; max-height:260px; object-fit:cover; margin:9px 0; border-radius:10px; }
+        .comm-post-code {
+            background:rgba(0,0,0,0.5); border:1px solid rgba(108,99,255,0.2);
+            border-radius:10px; padding:11px 15px; margin:9px 0;
+            font-family:'Courier New',monospace; font-size:0.78rem;
+            color:#a5b4fc; overflow-x:auto; white-space:pre;
+        }
+        .comm-post-actions { display:flex; gap:0; border-top:1px solid rgba(255,255,255,0.08); }
+        .comm-act-btn {
+            flex:1; padding:9px 0; font-size:0.78rem; font-weight:600;
+            background:transparent; color:#6b7280; border:none; cursor:pointer;
+            transition:all .2s; display:flex; align-items:center; justify-content:center; gap:5px;
+            border-right:1px solid rgba(255,255,255,0.08);
+        }
+        .comm-act-btn:last-child { border-right:none; }
+        .comm-act-btn:hover { background:rgba(255,255,255,0.04); color:#e8eaf0; }
+        .comm-act-btn.comm-liked { color:#ff6b9d; }
+
+        /* ── Comments ── */
+        .comm-comments-area {
+            border-top:1px solid rgba(255,255,255,0.08); padding:12px 18px;
+            display:none; background:rgba(0,0,0,0.1);
+        }
+        .comm-comments-area.open { display:block; }
+        .comm-comment-item { display:flex; gap:10px; margin-bottom:10px; animation:commFadeSlide .2s ease; }
+        .comm-cmt-ava {
+            width:30px; height:30px; border-radius:50%; flex-shrink:0;
+            background:linear-gradient(135deg,#00d4ff,#6c63ff);
+            display:flex; align-items:center; justify-content:center;
+            font-size:0.72rem; font-weight:700; overflow:hidden;
+        }
+        .comm-cmt-ava img { width:100%; height:100%; object-fit:cover; }
+        .comm-cmt-body { flex:1; }
+        .comm-cmt-name { font-size:0.72rem; font-weight:700; color:#00d4ff; margin-bottom:2px; }
+        .comm-cmt-text {
+            font-size:0.8rem; background:rgba(255,255,255,0.04);
+            padding:7px 11px; border-radius:0 10px 10px 10px;
+            border:1px solid rgba(255,255,255,0.08); line-height:1.5; word-break:break-word;
+            color:#e8eaf0;
+        }
+        .comm-cmt-likes { font-size:0.68rem; color:#6b7280; margin-top:4px; cursor:pointer; transition:color .2s; }
+        .comm-cmt-likes:hover { color:#ff6b9d; }
+        .comm-add-comment-row { display:flex; gap:8px; margin-top:10px; }
+        .comm-cmt-input {
+            flex:1; padding:7px 13px; border-radius:10px;
+            background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08);
+            font-size:0.8rem; color:#e8eaf0; transition:border-color .2s;
+            font-family:'Inter',sans-serif;
+        }
+        .comm-cmt-input:focus { border-color:#6c63ff; outline:none; }
+        .comm-cmt-send {
+            padding:7px 15px; border-radius:10px;
+            background:linear-gradient(135deg,#6c63ff,#00d4ff);
+            color:#fff; font-size:0.78rem; font-weight:700; border:none; cursor:pointer; transition:all .2s;
+        }
+        .comm-cmt-send:hover { opacity:.85; }
+
+        /* ── Filter bar ── */
+        .comm-filter-bar { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:18px; }
+        .comm-filter-tag {
+            padding:5px 14px; border-radius:20px; font-size:0.78rem; font-weight:600;
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:#6b7280;
+            cursor:pointer; transition:all .2s;
+        }
+        .comm-filter-tag:hover, .comm-filter-tag.comm-active {
+            background:rgba(108,99,255,0.15); border-color:rgba(108,99,255,0.4); color:#6c63ff;
+        }
+
+        /* ── Load more ── */
+        .comm-load-more {
+            display:block; width:100%; margin-top:14px;
+            padding:11px; border-radius:10px;
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+            font-size:0.82rem; font-weight:600; color:#6b7280;
+            text-align:center; cursor:pointer; transition:all .2s;
+        }
+        .comm-load-more:hover { border-color:#6c63ff; color:#e8eaf0; }
+
+        /* ── Timeline ── */
+        .comm-timeline-feed { max-width:660px; margin:0 auto; }
+        .comm-tl-item {
+            display:flex; gap:14px; margin-bottom:14px;
+            padding:15px; border-radius:16px;
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+            backdrop-filter:blur(16px); animation:commFadeSlide .3s ease; transition:border-color .2s;
+        }
+        .comm-tl-item:hover { border-color:rgba(255,255,255,0.14); }
+        .comm-tl-icon {
+            width:42px; height:42px; border-radius:12px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center; font-size:1.15rem;
+        }
+        .comm-tl-icon.post   { background:linear-gradient(135deg,rgba(108,99,255,0.2),rgba(0,212,255,0.1)); border:1px solid rgba(108,99,255,0.3); }
+        .comm-tl-icon.share  { background:linear-gradient(135deg,rgba(255,107,157,0.15),rgba(255,177,66,0.1)); border:1px solid rgba(255,107,157,0.3); }
+        .comm-tl-icon.upload { background:linear-gradient(135deg,rgba(6,255,165,0.1),rgba(0,212,255,0.15)); border:1px solid rgba(6,255,165,0.2); }
+        .comm-tl-body { flex:1; }
+        .comm-tl-msg { font-size:0.87rem; line-height:1.5; color:#e8eaf0; }
+        .comm-tl-msg strong { color:#00d4ff; }
+        .comm-tl-time { font-size:0.7rem; color:#6b7280; margin-top:4px; }
+
+        /* ── Spinner ── */
+        .comm-spinner {
+            display:inline-block; width:20px; height:20px; border-radius:50%;
+            border:2px solid rgba(255,255,255,0.14); border-top-color:#6c63ff;
+            animation:commSpin .8s linear infinite;
+        }
+        @keyframes commSpin { to { transform:rotate(360deg); } }
+
+        /* ── Online indicator (community only) ── */
+        #comm-online-count {
+            position:fixed; bottom:24px; left:24px; z-index:990;
+            padding:7px 14px; border-radius:20px;
+            background:rgba(10,15,28,0.9); backdrop-filter:blur(20px);
+            border:1px solid rgba(6,255,165,0.3);
+            font-size:0.75rem; font-weight:600; color:#06ffa5;
+            display:none; align-items:center; gap:6px;
+            box-shadow:0 4px 18px rgba(0,0,0,0.4);
+        }
+        #comm-online-count.comm-show { display:flex; }
+        #comm-online-count::before {
+            content:''; width:6px; height:6px; border-radius:50%;
+            background:#06ffa5; animation:commPulseLive 2s infinite;
+        }
+
+        /* ── Community Toast (separate from existing toast) ── */
+        #comm-toast {
+            position:fixed; bottom:24px; right:24px; z-index:9990;
+            padding:11px 18px; border-radius:12px;
+            background:rgba(10,15,28,0.96); backdrop-filter:blur(20px);
+            border:1px solid rgba(255,255,255,0.14);
+            font-size:0.83rem; font-weight:500; color:#e8eaf0;
+            box-shadow:0 8px 32px rgba(0,0,0,0.5);
+            transform:translateY(80px); opacity:0;
+            transition:all .3s cubic-bezier(.34,1.56,.64,1);
+            display:flex; align-items:center; gap:9px;
+        }
+        #comm-toast.comm-show { transform:translateY(0); opacity:1; }
+        #comm-toast.comm-success { border-color:rgba(6,255,165,0.4); color:#06ffa5; }
+        #comm-toast.comm-error   { border-color:rgba(255,107,157,0.4); color:#ff6b9d; }
+
+        /* ── Points system info box ── */
+        .comm-pts-grid {
+            display:grid; grid-template-columns:repeat(3,1fr); gap:10px; text-align:center;
+        }
+        .comm-pts-box {
+            padding:14px; background:rgba(255,255,255,0.04);
+            border-radius:10px; border:1px solid rgba(255,255,255,0.08);
+        }
     </style>
 </head>
-<body class="flex flex-col min-h-screen relative">
 
+<body class="flex flex-col min-h-screen relative noise bg-grid">
+
+    <!-- ===== AMBIENT BACKGROUND ===== -->
+    <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div class="glow-blob w-[600px] h-[600px] bg-blue-900/20 top-0 -left-32"></div>
+        <div class="glow-blob w-[500px] h-[500px] bg-purple-900/15 bottom-0 right-0"></div>
+        <div class="glow-blob w-[300px] h-[300px] bg-pink-900/10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+    </div>
+
+    <!-- ===== GUEST HEADER ===== -->
     <header id="header-guest" class="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-md border-b border-white/5 transition-all">
         <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
             <div class="flex items-center gap-2 cursor-pointer" onclick="renderGuestHome()">
-                <div class="bg-blue-600 p-1.5 rounded-md"><i class="fa-solid fa-microchip"></i></div>
-                <span class="font-bold text-xl">TC3 TECH-HUB</span>
+                <div class="bg-gradient-to-br from-blue-500 to-purple-600 p-1.5 rounded-md shadow-lg shadow-blue-900/30">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <span class="font-display font-bold text-xl tracking-tight">TC3 TECH-HUB</span>
             </div>
             <nav class="hidden md:flex space-x-8">
-                <a href="#" onclick="renderGuestHome()" class="hover:text-blue-400 font-medium">Trang chủ</a>
+                <a href="#" onclick="renderGuestHome()" class="hover:text-blue-400 font-medium transition-colors">Trang chủ</a>
                 <a href="#" onclick="renderProductStore()" class="text-slate-400 hover:text-white transition-colors">Kho dự án</a>
                 <a href="#" class="text-slate-400 hover:text-white transition-colors">Bảng xếp hạng</a>
             </nav>
             <div class="flex gap-3">
-                <button onclick="showSection('login-section')" class="px-4 py-2 hover:text-blue-400 font-medium">Log in</button>
-                <button onclick="showSection('register-section')" class="bg-blue-700 px-5 py-2 rounded-full hover:bg-blue-600 transition-all font-bold shadow-lg shadow-blue-900/20">Register</button>
+                <button onclick="showSection('login-section')" class="px-4 py-2 hover:text-blue-400 font-medium transition-colors">Log in</button>
+                <button onclick="showSection('register-section')" class="header-btn-glow bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-2 rounded-full font-bold shadow-lg shadow-blue-900/30 transition-all hover:from-blue-500 hover:to-purple-500">Register</button>
             </div>
         </div>
     </header>
 
-    <header id="header-user" class="fixed top-0 w-full z-50 bg-slate-950/90 backdrop-blur-md border-b border-blue-900/30 hidden">
+    <!-- ===== USER HEADER ===== -->
+    <header id="header-user" class="fixed top-0 w-full z-50 bg-slate-950/90 backdrop-blur-md border-b border-blue-900/20 hidden">
         <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
             <div class="flex items-center gap-2 cursor-pointer" onclick="showSection('user-dashboard')">
-                <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-1.5 rounded-md"><i class="fa-solid fa-layer-group"></i></div>
-                <span class="font-bold text-xl">TC3 MEMBER</span>
+                <div class="bg-gradient-to-br from-blue-500 to-purple-600 p-1.5 rounded-md shadow-lg shadow-blue-900/30">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <span class="font-display font-bold text-xl tracking-tight text-gradient-subtle">TC3 MEMBER</span>
             </div>
-            
+
             <nav class="hidden md:flex space-x-6 text-sm font-medium">
-                <a href="#" class="text-blue-400 border-b-2 border-blue-500 pb-1">Dự án của tôi</a>
-                <a href="#" onclick="renderProductStore()" class="text-slate-300 hover:text-white transition-colors">Kho dự án</a>
-                <a href="#" class="text-slate-300 hover:text-white transition-colors">Cộng đồng</a>
+                <a href="#" id="nav-my-projects" class="text-slate-300 hover:text-white transition-colors" onclick="showSection('user-dashboard'); setActiveNav('nav-my-projects')">Dự án của tôi</a>
+                <a href="#" id="nav-store" class="text-slate-300 hover:text-white transition-colors" onclick="renderProductStore(); setActiveNav('nav-store')">Kho dự án</a>
+                <!-- ===== COMMUNITY NAV WITH HOVER DROPDOWN ===== -->
+                <div class="comm-nav-wrap">
+                    <a href="#" class="text-slate-300 hover:text-white transition-colors"
+                       onclick="commRequireLogin() && showCommView('community'); return false;">Cộng đồng</a>
+                    <div class="comm-dropdown">
+                        <div class="comm-dd-item" onclick="commRequireLogin() && showCommView('forum')">
+                            <span class="comm-dd-icon">💬</span>
+                            <span class="comm-dd-label">Q&A Forum</span>
+                            <span class="comm-dd-desc">Hỏi đáp, chia sẻ kiến thức</span>
+                        </div>
+                        <div class="comm-dd-item" onclick="commRequireLogin() && showCommView('timeline')">
+                            <span class="comm-dd-icon">📡</span>
+                            <span class="comm-dd-label">Bảng Tin</span>
+                            <span class="comm-dd-desc">Hoạt động realtime</span>
+                        </div>
+                        <div class="comm-dd-item" onclick="commRequireLogin() && showCommView('chat')">
+                            <span class="comm-dd-icon">⚡</span>
+                            <span class="comm-dd-label">Live Chat</span>
+                            <span class="comm-dd-desc">Chat phòng chung</span>
+                        </div>
+                        <div class="comm-dd-item" onclick="commRequireLogin() && showCommView('leaderboard')">
+                            <span class="comm-dd-icon">🏆</span>
+                            <span class="comm-dd-label">Leaderboard</span>
+                            <span class="comm-dd-desc">Top 5 tháng này</span>
+                        </div>
+                        <div class="comm-dd-item" onclick="commRequireLogin() && showCommView('share')">
+                            <span class="comm-dd-icon">🚀</span>
+                            <span class="comm-dd-label">Chia Sẻ Dự Án</span>
+                            <span class="comm-dd-desc">Đăng lên cộng đồng</span>
+                        </div>
+                    </div>
+                </div>
                 <a href="#" class="text-slate-300 hover:text-white transition-colors">Thi đua rèn luyện</a>
                 <a href="#" class="text-slate-300 hover:text-white transition-colors">Đội nhóm</a>
             </nav>
 
             <div class="relative">
-                <button onclick="toggleDropdown()" class="flex items-center gap-3 focus:outline-none p-1 rounded-full hover:bg-white/5 transition-all pr-4 border border-transparent hover:border-white/10">
-                    <img id="header-avatar" src="" alt="User" class="w-9 h-9 rounded-full object-cover border-2 border-blue-500">
+                <button onclick="toggleDropdown()" class="flex items-center gap-3 focus:outline-none p-1 rounded-full hover:bg-white/5 transition-all pr-4 border border-transparent hover:border-blue-500/20">
+                    <img id="header-avatar" src="" alt="User" class="w-9 h-9 rounded-full object-cover border-2 border-blue-500 shadow-lg shadow-blue-900/30">
                     <span id="header-username" class="font-semibold text-sm hidden sm:block">User</span>
-                    <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                    <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform" id="dropdown-chevron"></i>
                 </button>
 
                 <div id="user-dropdown" class="absolute right-0 mt-3 w-56 bg-[#0f172a] rounded-xl shadow-2xl border border-slate-700 hidden-dropdown dropdown-menu overflow-hidden">
-                    <div class="px-4 py-3 border-b border-slate-700/50 bg-slate-800/50">
+                    <div class="px-4 py-3 border-b border-slate-700/50 bg-gradient-to-r from-blue-900/20 to-purple-900/20">
                         <p class="text-xs text-slate-400 uppercase tracking-wider">Tài khoản</p>
-                        <p id="dropdown-name" class="font-bold text-white truncate">Minh Quân</p>
+                        <p id="dropdown-name" class="font-bold text-white truncate">TC3 User</p>
                     </div>
                     <ul class="py-1">
                         <li>
                             <button onclick="openProfilePage()" class="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/10 hover:text-blue-400 flex items-center gap-3 transition-colors">
-                                <i class="fa-regular fa-id-card"></i> Thông tin người dùng
+                                <i class="fa-regular fa-id-card w-4"></i> Thông tin người dùng
                             </button>
                         </li>
                         <li>
                             <button onclick="confirmLogout()" class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-3 transition-colors">
-                                <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất
+                                <i class="fa-solid fa-arrow-right-from-bracket w-4"></i> Đăng xuất
                             </button>
                         </li>
                     </ul>
@@ -94,105 +1086,252 @@
         </div>
     </header>
 
+    <!-- ===== MAIN CONTENT ===== -->
     <main class="flex-grow pt-24 pb-10 relative w-full">
-        
-        <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[100px]"></div>
-            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-900/10 rounded-full blur-[100px]"></div>
-        </div>
 
-        <div id="guest-home" class="max-w-4xl mx-auto px-4 text-center w-full section-content">
-            <div class="space-y-8 animate-[fadeIn_0.5s_ease-out]">
-                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-900/10 text-blue-400 text-xs font-semibold uppercase tracking-wider">
-                    <i class="fa-regular fa-star"></i> Mạng lưới kết nối đam mê
+        <!-- ===== GUEST HOME ===== -->
+        <div id="guest-home" class="max-w-5xl mx-auto px-4 text-center w-full section-content py-16">
+            <div class="space-y-8">
+                <!-- Floating decoratives -->
+                <div class="relative inline-block">
+                    <div class="float-anim absolute -top-8 -left-16 text-blue-500/20 text-6xl pointer-events-none">✦</div>
+                    <div class="float-anim-2 absolute -top-4 -right-12 text-purple-500/20 text-4xl pointer-events-none">◈</div>
+                    <div class="float-anim-3 absolute -bottom-8 left-8 text-pink-500/15 text-5xl pointer-events-none">⬡</div>
+
+                    <div class="welcome-badge inline-flex items-center gap-2 mb-6">
+                        <span class="inline-block w-2 h-2 rounded-full bg-blue-400 shadow-lg shadow-blue-400/50" style="animation: pulse-glow 2s infinite"></span>
+                        Mạng lưới kết nối đam mê · TC3 Class 11A1
+                    </div>
                 </div>
-                <h1 class="text-5xl md:text-7xl font-black text-white leading-tight">
-                    Nơi Biến Ý Tưởng Thành <br><span class="text-gradient">Sản Phẩm Thực Tế</span>
+
+                <h1 class="text-5xl md:text-7xl font-display font-black text-white leading-tight tracking-tight">
+                    Nơi Biến Ý Tưởng<br>
+                    Thành <span class="text-gradient">Sản Phẩm</span>
                 </h1>
-                <p class="text-slate-400 text-lg max-w-2xl mx-auto">
-                    Chào mừng bạn đến với Kho Tàng Số. Hãy khám phá các dự án sáng tạo và tham gia cùng cộng đồng TC3.
+
+                <p class="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
+                    Chào mừng bạn đến với Kho Tàng Số. Khám phá các dự án sáng tạo,<br class="hidden md:block"> chia sẻ thành quả và kết nối cùng cộng đồng TC3.
                 </p>
+
+                <!-- Stats row -->
+                <div class="flex justify-center gap-6 mt-4">
+                    <div class="welcome-stat-card text-center">
+                        <div class="text-2xl font-display font-bold text-gradient">100+</div>
+                        <div class="text-xs text-slate-500 mt-1">Dự án</div>
+                    </div>
+                    <div class="welcome-stat-card text-center">
+                        <div class="text-2xl font-display font-bold text-gradient">42</div>
+                        <div class="text-xs text-slate-500 mt-1">Thành viên</div>
+                    </div>
+                    <div class="welcome-stat-card text-center">
+                        <div class="text-2xl font-display font-bold text-gradient">∞</div>
+                        <div class="text-xs text-slate-500 mt-1">Ý tưởng</div>
+                    </div>
+                </div>
+
                 <div class="flex justify-center gap-4 mt-8">
-                    <button onclick="renderProductStore()" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2">
-                        Tham gia ngay <i class="fa-solid fa-arrow-right"></i>
+                    <button onclick="renderProductStore()" class="header-btn-glow bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2">
+                        Khám phá ngay <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    <button onclick="showSection('login-section')" class="px-8 py-3.5 rounded-xl font-bold border border-slate-700 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-user"></i> Đăng nhập
                     </button>
                 </div>
             </div>
         </div>
 
+        <!-- ===== PRODUCT STORE ===== -->
         <div id="product-store" class="hidden w-full max-w-7xl mx-auto px-6 section-content pb-20 pt-10">
             <div class="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
                 <div class="text-left">
-                    <h2 class="text-4xl font-extrabold text-white">Kho Dự Án <span class="text-blue-500">TC3</span></h2>
-                    <p class="text-slate-400 mt-2">Dưới đây là các sản phẩm tiêu biểu của học sinh 11A1.</p>
+                    <div class="welcome-badge inline-flex items-center gap-2 mb-4">
+                        <i class="fa-solid fa-cube text-blue-400 text-xs"></i>
+                        Kho Tàng Số
+                    </div>
+                    <h2 class="text-4xl font-display font-extrabold text-white">Kho Dự Án <span class="text-gradient">TC3</span></h2>
+                    <p class="text-slate-400 mt-2">Các sản phẩm tiêu biểu của học sinh 11A1.</p>
                 </div>
-                
                 <div class="relative w-full md:w-96">
                     <div class="relative">
                         <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
                         <input type="text" id="product-search" oninput="handleSearchInput(this.value)" onkeypress="handleSearchEnter(event)"
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" 
+                            class="w-full bg-slate-900/80 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white focus:border-blue-500 outline-none transition-all"
                             placeholder="Tìm tên dự án hoặc công nghệ...">
                     </div>
                     <div id="search-suggestions" class="search-results"></div>
                 </div>
             </div>
-
-            <div id="product-display-grid" class="product-grid">
-                </div>
+            <div id="product-display-grid" class="product-grid"></div>
         </div>
 
-        <div id="login-section" class="hidden max-w-md w-full mx-auto bg-[#0f172a] p-8 rounded-2xl border border-slate-800 shadow-2xl section-content relative">
-            <button onclick="renderGuestHome()" class="absolute top-4 right-4 text-slate-500 hover:text-white"><i class="fa-solid fa-xmark fa-lg"></i></button>
-            <h2 class="text-2xl font-bold mb-2 text-white">Chào mừng trở lại</h2>
-            <p class="text-slate-400 text-sm mb-6">Vui lòng đăng nhập để tiếp tục.</p>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1 ml-1">Tên đăng nhập / Email</label>
-                    <input type="text" id="login-user" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+        <!-- ===== LOGIN ===== -->
+        <div id="login-section" class="hidden max-w-md w-full mx-auto section-content relative">
+            <div class="glass-card p-8 rounded-2xl shadow-2xl">
+                <button onclick="renderGuestHome()" class="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"><i class="fa-solid fa-xmark fa-lg"></i></button>
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                        <i class="fa-solid fa-lock text-sm"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-display font-bold text-white">Chào mừng trở lại</h2>
+                        <p class="text-slate-400 text-xs">Đăng nhập để tiếp tục</p>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1 ml-1">Mật khẩu</label>
-                    <input type="password" id="login-pass" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 ml-1 font-semibold uppercase tracking-wider">Email</label>
+                        <input type="text" id="login-user" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 ml-1 font-semibold uppercase tracking-wider">Mật khẩu</label>
+                        <input type="password" id="login-pass" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                    </div>
+                    <button onclick="handleLogin()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-900/30 mt-2">Đăng Nhập</button>
                 </div>
-                <button onclick="handleLogin()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg mt-2">Đăng Nhập</button>
-            </div>
-            <div class="mt-6 text-center text-sm text-slate-500">
-                Chưa có tài khoản? <button onclick="showSection('register-section')" class="text-blue-400 hover:text-blue-300 font-semibold">Đăng ký ngay</button>
-            </div>
-        </div>
-
-        <div id="register-section" class="hidden max-w-md w-full mx-auto bg-[#0f172a] p-8 rounded-2xl border border-slate-800 shadow-2xl section-content relative">
-            <button onclick="renderGuestHome()" class="absolute top-4 right-4 text-slate-500 hover:text-white"><i class="fa-solid fa-xmark fa-lg"></i></button>
-            <h2 class="text-2xl font-bold mb-2 text-white">Tạo tài khoản mới</h2>
-            <p class="text-slate-400 text-sm mb-6">Nhập thông tin để gia nhập cộng đồng.</p>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1 ml-1">Tên hiển thị</label>
-                    <input type="text" id="reg-user" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                <div class="mt-6 text-center text-sm text-slate-500">
+                    Chưa có tài khoản? <button onclick="showSection('register-section')" class="text-blue-400 hover:text-blue-300 font-semibold">Đăng ký ngay</button>
                 </div>
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1 ml-1">Email liên kết</label>
-                    <input type="email" id="reg-email" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
-                </div>
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1 ml-1">Mật khẩu</label>
-                    <input type="password" id="reg-pass" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
-                </div>
-                <button onclick="handleRegister()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg mt-2">Đăng Ký</button>
             </div>
         </div>
 
-        <div id="user-dashboard" class="hidden w-full h-full flex items-center justify-center section-content">
-            <div class="text-center opacity-50">
-                <i class="fa-solid fa-code text-6xl text-slate-700 mb-4"></i>
-                <p class="text-slate-500">Chào mừng quay trở lại hệ thống!</p>
+        <!-- ===== REGISTER ===== -->
+        <div id="register-section" class="hidden max-w-md w-full mx-auto section-content relative">
+            <div class="glass-card p-8 rounded-2xl shadow-2xl">
+                <button onclick="renderGuestHome()" class="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"><i class="fa-solid fa-xmark fa-lg"></i></button>
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg">
+                        <i class="fa-solid fa-user-plus text-sm"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-display font-bold text-white">Tạo tài khoản mới</h2>
+                        <p class="text-slate-400 text-xs">Gia nhập cộng đồng TC3</p>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 ml-1 font-semibold uppercase tracking-wider">Tên hiển thị</label>
+                        <input type="text" id="reg-user" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 ml-1 font-semibold uppercase tracking-wider">Email liên kết</label>
+                        <input type="email" id="reg-email" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 ml-1 font-semibold uppercase tracking-wider">Mật khẩu</label>
+                        <input type="password" id="reg-pass" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 outline-none transition-all">
+                    </div>
+                    <button onclick="handleRegister()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg mt-2">Đăng Ký</button>
+                </div>
             </div>
         </div>
 
+        <!-- ===== USER DASHBOARD ===== -->
+        <div id="user-dashboard" class="hidden w-full max-w-7xl mx-auto px-6 section-content pb-20 pt-6">
+
+            <!-- TOP SECTION -->
+            <div class="flex flex-col md:flex-row gap-6 mb-4">
+
+                <!-- LEFT: Create Product -->
+                <div class="flex-1 glass-card p-8 rounded-2xl shadow-xl relative overflow-hidden">
+                    <!-- Decorative corner glow -->
+                    <div class="absolute top-0 right-0 w-48 h-48 bg-blue-600/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-white">Tạo sản phẩm mới</h3>
+                    </div>
+
+                    <!-- Upload Box -->
+                    <div class="upload-box p-10 flex flex-col items-center justify-center text-center cursor-pointer"
+                         onclick="document.getElementById('new-file-input').click()">
+                        <div class="plus-btn mb-4">
+                            <i class="fa-solid fa-plus text-2xl text-white"></i>
+                        </div>
+                        <span class="text-slate-300 font-semibold text-base">Nhấn để tải file lên</span>
+                        <div class="flex items-center gap-2 mt-3">
+                            <span class="text-xs bg-blue-900/40 text-blue-300 border border-blue-500/20 px-2.5 py-1 rounded-full font-medium">.SB3</span>
+                            <span class="text-xs text-slate-600">·</span>
+                            <span class="text-xs bg-purple-900/40 text-purple-300 border border-purple-500/20 px-2.5 py-1 rounded-full font-medium">.PDF</span>
+                        </div>
+                        <input type="file" id="new-file-input" accept=".sb3, .pdf" class="hidden" onchange="handleNewFileSelect(event)">
+                    </div>
+                </div>
+
+                <!-- RIGHT: Welcome Card -->
+                <div class="flex-1 relative overflow-hidden rounded-2xl">
+                    <div class="welcome-card h-full p-8 flex flex-col justify-between relative">
+                        <!-- Floating decorative elements -->
+                        <div class="absolute top-4 right-4 float-anim opacity-10 pointer-events-none">
+                            <i class="fa-solid fa-microchip text-blue-400 text-5xl"></i>
+                        </div>
+                        <div class="absolute bottom-8 right-16 float-anim-2 opacity-8 pointer-events-none">
+                            <i class="fa-solid fa-code text-purple-400 text-3xl"></i>
+                        </div>
+                        <div class="absolute top-1/2 right-8 float-anim-3 opacity-8 pointer-events-none">
+                            <i class="fa-solid fa-star text-pink-400 text-xl"></i>
+                        </div>
+
+                        <!-- Deco rings -->
+                        <div class="deco-ring w-32 h-32 absolute -bottom-8 -left-8 opacity-30"></div>
+                        <div class="deco-ring w-20 h-20 absolute top-12 left-1/3 opacity-20"></div>
+
+                        <div>
+                            <div class="welcome-badge inline-flex items-center gap-2 mb-4">
+                                <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-400" style="animation: pulse-glow 2s infinite"></span>
+                                Online · TC3 TECH-HUB
+                            </div>
+                            <h3 class="text-3xl font-display font-black text-white leading-tight mb-3">
+                                Chào mừng, <span id="welcome-username" class="text-gradient"></span>!
+                            </h3>
+                            <p class="text-slate-400 text-sm leading-relaxed max-w-sm">
+                                Đây là không gian sáng tạo của riêng bạn. Hãy tải lên dự án Scratch hoặc PDF để chia sẻ cùng cộng đồng TC3.
+                            </p>
+                        </div>
+
+                        <div class="flex gap-3 mt-6">
+                            <div class="welcome-stat-card flex-1 text-center">
+                                <div id="user-project-count" class="text-xl font-display font-bold text-gradient">0</div>
+                                <div class="text-xs text-slate-500 mt-0.5">Dự án của bạn</div>
+                            </div>
+                            <div class="welcome-stat-card flex-1 text-center">
+                                <div class="text-xl font-display font-bold text-gradient">TC3</div>
+                                <div class="text-xs text-slate-500 mt-0.5">Cộng đồng</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DIVIDER -->
+            <div class="gradient-divider my-10"></div>
+
+            <!-- BOTTOM SECTION: My Products -->
+            <div>
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-3xl font-display font-extrabold text-white flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20 flex items-center justify-center">
+                            <i class="fa-solid fa-folder-open text-blue-400 text-base"></i>
+                        </span>
+                        Sản phẩm của tôi
+                    </h2>
+                    <div class="text-xs text-slate-600 uppercase tracking-wider font-semibold">Được lưu trên Firebase</div>
+                </div>
+                <div id="my-personal-projects-grid" class="product-grid">
+                    <div class="col-span-full text-center py-20 bg-slate-900/20 rounded-2xl border border-dashed border-slate-800/50 text-slate-600">
+                        <i class="fa-solid fa-inbox text-3xl mb-3 block opacity-50"></i>
+                        Bạn chưa có sản phẩm nào. Hãy nhấn dấu cộng ở trên để bắt đầu!
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== PROFILE PAGE ===== -->
         <div id="profile-page" class="hidden w-full max-w-4xl mx-auto px-4 py-8 section-content">
-            <div class="bg-[#0f172a] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+            <div class="glass-card border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
                 <div class="h-32 bg-gradient-to-r from-blue-900 to-purple-900 relative">
+                    <div class="absolute inset-0 bg-grid opacity-30"></div>
                     <button onclick="showSection('user-dashboard')" class="absolute top-4 left-4 bg-black/30 hover:bg-black/50 text-white px-3 py-1 rounded-lg backdrop-blur-sm text-sm transition-all">
                         <i class="fa-solid fa-arrow-left mr-1"></i> Quay lại
                     </button>
@@ -201,38 +1340,33 @@
                     <div class="relative -mt-12 mb-6 flex flex-col md:flex-row items-end md:items-center gap-6">
                         <img id="profile-current-avatar" src="" class="w-24 h-24 rounded-full border-4 border-[#0f172a] bg-slate-800 shadow-xl object-cover">
                         <div class="flex-1">
-                            <h2 class="text-2xl font-bold text-white">Chỉnh sửa hồ sơ</h2>
+                            <h2 class="text-2xl font-display font-bold text-white">Chỉnh sửa hồ sơ</h2>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div class="md:col-span-1 space-y-4">
-                            <h3 class="font-semibold text-slate-300 border-b border-slate-800 pb-2">Chọn Avatar</h3>
+                            <h3 class="font-semibold text-slate-300 border-b border-slate-800/50 pb-2">Chọn Avatar</h3>
                             <div class="grid grid-cols-3 gap-3" id="avatar-grid"></div>
                         </div>
                         <div class="md:col-span-2 space-y-4">
                             <div>
-                                <label class="text-xs text-slate-500 uppercase font-bold">Tên người dùng</label>
-                                <input type="text" id="edit-name" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-white mt-1 focus:border-blue-500 outline-none">
+                                <label class="text-xs text-slate-500 uppercase font-bold tracking-wider">Tên người dùng</label>
+                                <input type="text" id="edit-name" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl p-3 text-white mt-1 focus:border-blue-500 outline-none transition-all">
                             </div>
                             <div>
-                                <label class="text-xs text-slate-500 uppercase font-bold">Email</label>
-                                <input type="email" id="edit-email" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-white mt-1 focus:border-blue-500 outline-none">
+                                <label class="text-xs text-slate-500 uppercase font-bold tracking-wider">Email</label>
+                                <input type="email" id="edit-email" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl p-3 text-white mt-1 focus:border-blue-500 outline-none transition-all">
                             </div>
                             <div>
-    <label class="text-xs text-slate-500 uppercase font-bold">Mật khẩu mới</label>
-    <input type="password" id="edit-password"
-        placeholder="Để trống nếu không đổi"
-        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-white mt-1 focus:border-blue-500 outline-none">
-</div>
-
-<div>
-    <label class="text-xs text-slate-500 uppercase font-bold">Xác nhận mật khẩu</label>
-    <input type="password" id="edit-password-confirm"
-        placeholder="Nhập lại mật khẩu"
-        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-white mt-1 focus:border-blue-500 outline-none">
-</div>
+                                <label class="text-xs text-slate-500 uppercase font-bold tracking-wider">Mật khẩu mới</label>
+                                <input type="password" id="edit-password" placeholder="Để trống nếu không đổi" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl p-3 text-white mt-1 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-500 uppercase font-bold tracking-wider">Xác nhận mật khẩu</label>
+                                <input type="password" id="edit-password-confirm" placeholder="Nhập lại mật khẩu" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl p-3 text-white mt-1 focus:border-blue-500 outline-none transition-all">
+                            </div>
                             <div class="pt-4 flex justify-end gap-3">
-                                <button onclick="preSaveCheck()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold shadow-lg transition-all">Lưu thay đổi</button>
+                                <button onclick="preSaveCheck()" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl font-bold shadow-lg transition-all">Lưu thay đổi</button>
                             </div>
                         </div>
                     </div>
@@ -240,43 +1374,398 @@
             </div>
         </div>
 
+        <!-- ===================================================================
+             COMMUNITY SECTION (all sub-views, hidden until user logs in)
+             All IDs and classes prefixed with "comm-" to avoid conflicts
+        ==================================================================== -->
+        <div id="community-section" class="hidden section-content comm-root">
+
+            <!-- ── Back to Dashboard quick link ── -->
+            <button class="comm-back-btn" onclick="showSection('user-dashboard'); setActiveNav('nav-my-projects')">
+                ← Quay về Dashboard
+            </button>
+
+            <!-- ══ VIEW: COMMUNITY HOME (2-column) ══ -->
+            <div id="comm-view-community" class="comm-view comm-active">
+                <div class="comm-section-header">
+                    <span class="comm-section-title">🌐 Cộng Đồng</span>
+                    <div class="comm-badge-live">LIVE</div>
+                </div>
+                <div class="comm-layout">
+
+                    <!-- LEFT: Leaderboard mini + Mini Chat -->
+                    <div>
+                        <div class="comm-card" style="margin-bottom:18px">
+                            <div class="comm-card-title">🏆 <span>Leaderboard Tháng Này</span></div>
+                            <div id="comm-lb-mini"></div>
+                            <button class="comm-load-more" onclick="showCommView('leaderboard')" style="margin-top:6px">Xem đầy đủ →</button>
+                        </div>
+                        <div class="comm-card">
+                            <div class="comm-card-title" style="justify-content:space-between">
+                                <span style="display:flex;align-items:center;gap:8px">⚡ <span>Live Chat</span></span>
+                                <div class="comm-badge-live" style="font-size:0.63rem">LIVE</div>
+                            </div>
+                            <div class="comm-chat-box" id="comm-mini-chat-box"></div>
+                            <div class="comm-chat-input-row">
+                                <input class="comm-chat-input" id="comm-mini-chat-input" placeholder="Nhắn gì đó..." onkeydown="if(event.key==='Enter')commSendMiniChat()"/>
+                                <button class="comm-chat-send" onclick="commSendMiniChat()">→</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Composer + Feed -->
+                    <div>
+                        <div class="comm-composer">
+                            <div class="comm-composer-title">✍️ Đăng bài mới</div>
+                            <input class="comm-compose-input" id="comm-c-title" placeholder="Tiêu đề bài viết..."/>
+                            <textarea class="comm-compose-area" id="comm-c-content" placeholder="Nội dung, câu hỏi, hoặc chia sẻ của bạn..."></textarea>
+                            <img id="comm-c-img-preview" class="comm-img-preview" alt="preview"/>
+                            <textarea class="comm-compose-code" id="comm-c-code" placeholder="// Code snippet (tùy chọn)"></textarea>
+                            <div class="comm-tags-row" id="comm-tags-row">
+                                <span style="font-size:0.75rem;color:#6b7280;font-weight:600">#</span>
+                                <input class="comm-tag-input" id="comm-tag-input" placeholder="Thêm tag... Enter" onkeydown="commAddTag(event)"/>
+                            </div>
+                            <div class="comm-toolbar">
+                                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                                    <label class="comm-tool-btn">
+                                        📷 Ảnh
+                                        <input type="file" accept="image/*" style="display:none" onchange="commPreviewImg(event)"/>
+                                    </label>
+                                    <button class="comm-tool-btn" id="comm-code-toggle" onclick="commToggleCode()">💻 Code</button>
+                                </div>
+                                <button class="comm-post-btn" onclick="commSubmitPost()">🚀 Đăng Bài</button>
+                            </div>
+                        </div>
+                        <div class="comm-filter-bar" id="comm-filter-bar">
+                            <button class="comm-filter-tag comm-active" onclick="commFilterPosts(null,this)">Tất cả</button>
+                            <button class="comm-filter-tag" onclick="commFilterPosts('js',this)">JavaScript</button>
+                            <button class="comm-filter-tag" onclick="commFilterPosts('python',this)">Python</button>
+                            <button class="comm-filter-tag" onclick="commFilterPosts('scratch',this)">Scratch</button>
+                            <button class="comm-filter-tag" onclick="commFilterPosts('question',this)">❓ Hỏi đáp</button>
+                            <button class="comm-filter-tag" onclick="commFilterPosts('share',this)">🔗 Chia sẻ</button>
+                        </div>
+                        <div id="comm-post-feed"></div>
+                        <button class="comm-load-more" id="comm-load-more-btn" onclick="commLoadMorePosts()" style="display:none">Tải thêm bài viết</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ VIEW: FORUM ══ -->
+            <div id="comm-view-forum" class="comm-view">
+                <div class="comm-section-header">
+                    <span class="comm-section-title">💬 Q&A Forum</span>
+                    <div class="comm-badge-live">LIVE</div>
+                </div>
+                <div class="comm-filter-bar" id="comm-forum-filter-bar">
+                    <button class="comm-filter-tag comm-active" onclick="commFilterForumPosts(null,this)">Tất cả</button>
+                    <button class="comm-filter-tag" onclick="commFilterForumPosts('js',this)">JavaScript</button>
+                    <button class="comm-filter-tag" onclick="commFilterForumPosts('python',this)">Python</button>
+                    <button class="comm-filter-tag" onclick="commFilterForumPosts('scratch',this)">Scratch</button>
+                    <button class="comm-filter-tag" onclick="commFilterForumPosts('question',this)">❓ Hỏi đáp</button>
+                </div>
+                <div id="comm-forum-feed"></div>
+            </div>
+
+            <!-- ══ VIEW: TIMELINE ══ -->
+            <div id="comm-view-timeline" class="comm-view">
+                <div class="comm-section-header">
+                    <span class="comm-section-title">📡 Bảng Tin Hoạt Động</span>
+                    <div class="comm-badge-live">REALTIME</div>
+                </div>
+                <div class="comm-timeline-feed" id="comm-timeline-feed">
+                    <div style="text-align:center;padding:40px;color:#6b7280">
+                        <div class="comm-spinner"></div>
+                        <p style="margin-top:12px;font-size:0.85rem">Đang tải hoạt động...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ VIEW: LIVE CHAT ══ -->
+            <div id="comm-view-chat" class="comm-view">
+                <div class="comm-section-header">
+                    <span class="comm-section-title">⚡ Live Chat — Phòng Chung</span>
+                    <div class="comm-badge-live">LIVE</div>
+                </div>
+                <div class="comm-chat-full">
+                    <div class="comm-chat-full-box" id="comm-chat-full-box"></div>
+                    <div class="comm-chat-full-input-row">
+                        <input class="comm-chat-full-input" id="comm-chat-full-input"
+                               placeholder="Nhắn gì đó với cả lớp... (Enter để gửi)"
+                               onkeydown="if(event.key==='Enter')commSendFullChat()"/>
+                        <button class="comm-chat-full-send" onclick="commSendFullChat()">Gửi →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ VIEW: LEADERBOARD ══ -->
+            <div id="comm-view-leaderboard" class="comm-view">
+                <div class="comm-section-header">
+                    <span class="comm-section-title">🏆 Bảng Xếp Hạng</span>
+                    <span style="font-size:0.8rem;color:#6b7280" id="comm-lb-month-label"></span>
+                </div>
+                <div style="max-width:660px;margin:0 auto" id="comm-lb-full-list">
+                    <div style="text-align:center;padding:40px;color:#6b7280">
+                        <div class="comm-spinner"></div>
+                        <p style="margin-top:12px;font-size:0.85rem">Đang tải...</p>
+                    </div>
+                </div>
+                <div style="max-width:660px;margin:18px auto 0" class="comm-card">
+                    <div class="comm-card-title">📊 <span>Hệ thống điểm</span></div>
+                    <div class="comm-pts-grid">
+                        <div class="comm-pts-box">
+                            <div style="font-size:1.4rem;margin-bottom:5px">✍️</div>
+                            <div style="font-size:1.15rem;font-weight:800;font-family:'Syne',sans-serif;color:#6c63ff">+5</div>
+                            <div style="font-size:0.72rem;color:#6b7280">Đăng bài</div>
+                        </div>
+                        <div class="comm-pts-box">
+                            <div style="font-size:1.4rem;margin-bottom:5px">💬</div>
+                            <div style="font-size:1.15rem;font-weight:800;font-family:'Syne',sans-serif;color:#00d4ff">+2</div>
+                            <div style="font-size:0.72rem;color:#6b7280">Comment</div>
+                        </div>
+                        <div class="comm-pts-box">
+                            <div style="font-size:1.4rem;margin-bottom:5px">❤️</div>
+                            <div style="font-size:1.15rem;font-weight:800;font-family:'Syne',sans-serif;color:#ff6b9d">+1</div>
+                            <div style="font-size:0.72rem;color:#6b7280">Nhận like</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ VIEW: SHARE PROJECT ══ -->
+            <div id="comm-view-share" class="comm-view">
+                <div class="comm-section-header">
+                    <span class="comm-section-title">🚀 Chia Sẻ Dự Án</span>
+                </div>
+                <div style="max-width:580px;margin:0 auto" class="comm-card">
+                    <div class="comm-card-title">📦 <span>Chọn dự án để chia sẻ</span></div>
+                    <div id="comm-share-project-list">
+                        <div style="text-align:center;color:#6b7280;padding:30px;font-size:0.85rem">Đang tải dự án của bạn...</div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /#community-section -->
+
     </main>
 
-    <footer id="main-footer" class="border-t border-slate-800/50 bg-[#03060d] py-6 mt-auto">
-        <div class="text-center text-xs text-slate-600 tracking-widest uppercase">
-            © 2024 TC3 TECH-HUB. Developed by 11A1.
+    <!-- ===== FOOTER ===== -->
+    <footer id="main-footer" class="border-t border-slate-800/30 bg-[#03060d] py-8 mt-auto">
+        <div class="text-center text-xs text-slate-700 tracking-widest uppercase font-semibold">
+            © 2024 TC3 TECH-HUB · Developed with <span class="text-red-900">♥</span> by 11A1
         </div>
     </footer>
 
+    <!-- ===================================================================
+         MODALS
+    ==================================================================== -->
+
+    <!-- LOGOUT MODAL -->
     <div id="logout-modal" class="fixed inset-0 z-[60] flex items-center justify-center hidden">
         <div class="modal-overlay absolute inset-0" onclick="closeModal('logout-modal')"></div>
-        <div class="bg-[#1e293b] rounded-xl p-6 max-w-sm w-full mx-4 relative z-10 border border-slate-700 shadow-2xl">
+        <div class="glass-card rounded-2xl p-6 max-w-sm w-full mx-4 relative z-10 border border-slate-700 shadow-2xl">
             <div class="text-center">
+                <div class="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-arrow-right-from-bracket text-red-400"></i>
+                </div>
                 <h3 class="text-lg font-bold text-white mb-2">Bạn muốn đăng xuất?</h3>
-                <div class="flex gap-3 justify-center mt-6">
-                    <button onclick="closeModal('logout-modal')" class="px-4 py-2 bg-slate-700 text-white rounded-lg">Hủy</button>
-                    <button onclick="performLogout()" class="px-4 py-2 bg-red-600 text-white rounded-lg">Đồng ý</button>
+                <p class="text-slate-500 text-sm mb-6">Bạn sẽ cần đăng nhập lại để tiếp tục.</p>
+                <div class="flex gap-3 justify-center">
+                    <button onclick="closeModal('logout-modal')" class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-all font-medium">Hủy</button>
+                    <button onclick="performLogout()" class="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all font-bold">Đăng xuất</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- SAVE PROFILE MODAL -->
     <div id="save-modal" class="fixed inset-0 z-[60] flex items-center justify-center hidden">
         <div class="modal-overlay absolute inset-0"></div>
-        <div class="bg-[#1e293b] rounded-xl p-6 max-w-sm w-full mx-4 relative z-10 border border-slate-700 shadow-2xl text-center">
+        <div class="glass-card rounded-2xl p-6 max-w-sm w-full mx-4 relative z-10 border border-slate-700 shadow-2xl text-center">
             <h3 class="text-lg font-bold text-white mb-4">Xác nhận lưu thay đổi?</h3>
             <div class="flex gap-3 justify-center">
-                <button onclick="closeModal('save-modal')" class="px-4 py-2 bg-slate-700 text-white rounded-lg">Hủy</button>
-                <button onclick="performSaveProfile()" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Xác nhận</button>
+                <button onclick="closeModal('save-modal')" class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-all font-medium">Hủy</button>
+                <button onclick="performSaveProfile()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all font-bold">Xác nhận</button>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="fixed top-24 right-5 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-lg shadow-xl transform translate-x-[150%] transition-transform duration-300 z-[70] flex items-center gap-3">
-        <i class="fa-solid fa-circle-check text-green-400"></i>
-        <span id="toast-msg">Thông báo</span>
+    <!-- ===================================================================
+         UPLOAD LOADING OVERLAY (required by my-projects-v2.js)
+    ==================================================================== -->
+    <div id="upload-loading-overlay" class="fixed inset-0 z-[80] items-center justify-center hidden flex-col gap-6">
+        <!-- Animated background -->
+        <div class="absolute inset-0 bg-grid opacity-20"></div>
+        <div class="glow-blob w-[400px] h-[400px] bg-blue-900/30 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+
+        <div class="relative z-10 flex flex-col items-center gap-8">
+            <!-- Ring spinner -->
+            <div class="relative">
+                <div class="loading-ring"></div>
+                <div class="absolute inset-3 rounded-full border border-purple-500/20 border-dashed" style="animation: spin-slow 3s linear infinite reverse"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <i class="fa-solid fa-file-arrow-up text-blue-400 text-xl"></i>
+                </div>
+            </div>
+
+            <!-- Text -->
+            <div class="text-center">
+                <h3 class="text-xl font-display font-bold text-white mb-2">Đang phân tích file...</h3>
+                <p class="text-slate-500 text-sm" id="loading-status-text">Vui lòng đợi trong giây lát</p>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="w-64 h-1 bg-slate-800 rounded-full overflow-hidden">
+                <div class="loading-progress h-full w-full"></div>
+            </div>
+
+            <!-- File type badges -->
+            <div class="flex gap-3">
+                <span class="text-xs bg-blue-900/40 text-blue-300 border border-blue-500/20 px-3 py-1.5 rounded-full">.SB3 Scratch</span>
+                <span class="text-xs bg-purple-900/40 text-purple-300 border border-purple-500/20 px-3 py-1.5 rounded-full">.PDF Document</span>
+            </div>
+        </div>
     </div>
 
+    <!-- ===================================================================
+         PREVIEW MODAL (required by my-projects-v2.js)
+    ==================================================================== -->
+    <div id="preview-modal" class="fixed inset-0 z-[80] items-center justify-center hidden">
+        <!-- Background -->
+        <div class="absolute inset-0 bg-grid opacity-10"></div>
+        <div class="glow-blob w-[500px] h-[500px] bg-blue-900/20 absolute top-0 left-0"></div>
+        <div class="glow-blob w-[400px] h-[400px] bg-purple-900/15 absolute bottom-0 right-0"></div>
+
+        <!-- Modal Content -->
+        <div class="relative z-10 w-full max-w-6xl mx-4 flex flex-col h-[90vh] max-h-[90vh]">
+
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <i class="fa-solid fa-eye text-xs"></i>
+                    </div>
+                    <span class="font-display font-bold text-white text-lg">Xem trước & Xuất bản</span>
+                    <span class="text-xs bg-blue-900/40 text-blue-300 border border-blue-500/20 px-2 py-0.5 rounded-full" id="preview-file-type-badge">SB3</span>
+                </div>
+                <button onclick="closePreviewModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Left + Right -->
+            <div class="flex flex-col md:flex-row flex-1 overflow-hidden gap-0">
+
+                <!-- LEFT PANEL: Product Info -->
+                <div class="preview-panel w-full md:w-72 flex-shrink-0 p-5 flex flex-col gap-4 overflow-y-auto m-4 mr-0">
+                    <div>
+                        <div class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-3">Sản phẩm của tôi</div>
+                        <div class="text-xs text-slate-600 mb-2 flex items-center gap-1.5">
+                            <i class="fa-solid fa-file text-blue-400/60"></i>
+                            <span id="preview-file-name" class="truncate">filename.sb3</span>
+                        </div>
+                    </div>
+
+                    <!-- Thumbnail -->
+                    <div>
+                        <div class="text-xs text-slate-500 uppercase font-semibold tracking-wider mb-2">Ảnh minh họa <span class="text-red-400">*</span></div>
+                        <div class="thumbnail-upload-zone relative overflow-hidden"
+                             onclick="document.getElementById('thumbnail-input').click()">
+                            <img id="preview-thumbnail"
+                                 src="https://via.placeholder.com/300x200?text=Chưa+có+ảnh"
+                                 class="w-full h-36 object-cover rounded-xl"
+                                 alt="Thumbnail">
+                            <div class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded-xl">
+                                <div class="text-center">
+                                    <i class="fa-solid fa-camera text-white text-xl mb-1 block"></i>
+                                    <span class="text-white text-xs font-medium">Thay ảnh</span>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="file" id="thumbnail-input" accept=".jpg,.jpeg,.png" class="hidden" onchange="handleThumbnailSelect(event)">
+                        <p class="text-xs text-slate-600 mt-1.5">Chỉ chấp nhận .jpg và .png</p>
+                    </div>
+
+                    <!-- Product Name -->
+                    <div>
+                        <label class="text-xs text-slate-500 uppercase font-semibold tracking-wider block mb-2">Tên sản phẩm <span class="text-red-400">*</span></label>
+                        <input type="text" id="preview-name"
+                               class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:border-blue-500 outline-none transition-all"
+                               placeholder="Nhập tên sản phẩm...">
+                    </div>
+
+                    <!-- Author (readonly) -->
+                    <div>
+                        <label class="text-xs text-slate-500 uppercase font-semibold tracking-wider block mb-2">Tác giả</label>
+                        <div class="flex items-center gap-2 bg-slate-900/50 border border-slate-800 rounded-xl px-3 py-2.5">
+                            <i class="fa-solid fa-user text-blue-400 text-xs"></i>
+                            <input type="text" id="preview-author" readonly
+                                   class="bg-transparent text-slate-300 text-sm outline-none flex-1 cursor-default">
+                        </div>
+                    </div>
+
+                    <!-- Upload Button -->
+                    <div class="mt-auto pt-2">
+                        <button onclick="uploadProjectToFirebase()" class="upload-btn-main w-full flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            Xuất bản lên TC3
+                        </button>
+                        <p class="text-xs text-slate-600 text-center mt-2">Sản phẩm sẽ hiển thị trong Kho dự án</p>
+                    </div>
+                </div>
+
+                <!-- RIGHT PANEL: Demo -->
+                <div class="flex-1 p-4 flex flex-col gap-3 overflow-hidden">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-blue-400"></div>
+                        <span class="text-xs text-slate-500 uppercase font-semibold tracking-wider">Bản xem trước</span>
+                    </div>
+                    <div id="demo-container" class="demo-frame flex-1 flex items-center justify-center min-h-0">
+                        <div class="text-center text-slate-600">
+                            <i class="fa-solid fa-play-circle text-4xl mb-3 block opacity-30"></i>
+                            <p class="text-sm">Đang tải bản demo...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================
+         UPLOAD SUCCESS OVERLAY
+    ==================================================================== -->
+    <div id="success-overlay" class="fixed inset-0 z-[90] flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-grid opacity-10"></div>
+        <div class="glow-blob w-[400px] h-[400px] bg-green-900/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+        <div class="relative z-10 text-center success-pop">
+            <div class="success-icon-ring mx-auto mb-6">
+                <div class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <i class="fa-solid fa-check text-3xl text-green-400"></i>
+                </div>
+            </div>
+            <h2 class="text-3xl font-display font-black text-white mb-3">Xuất bản thành công!</h2>
+            <p class="text-slate-400 text-sm mb-2">Sản phẩm của bạn đã được tải lên hệ thống.</p>
+            <p class="text-slate-600 text-xs">Đang chuyển hướng...</p>
+
+            <!-- Confetti dots -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden" id="confetti-container"></div>
+        </div>
+    </div>
+
+    <!-- ===== COMMUNITY: Online indicator ===== -->
+    <div id="comm-online-count">1 online</div>
+    <!-- ===== COMMUNITY: Toast (separate from original) ===== -->
+    <div id="comm-toast"></div>
+
+    <!-- ===== TOAST ===== -->
+    <div id="toast" class="fixed top-24 right-5 px-4 py-3 rounded-xl shadow-xl transform translate-x-[150%] transition-transform duration-300 z-[70] flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-green-400"></i>
+        <span id="toast-msg" class="text-sm font-medium">Thông báo</span>
+    </div>
+
+
+    <!-- ===================================================================
+         CORE SCRIPTS (preserved from original)
+    ==================================================================== -->
     <script>
         const AVATARS = [
             'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
@@ -287,102 +1776,125 @@
             'https://api.dicebear.com/7.x/avataaars/svg?seed=Saitama'
         ];
 
-        // --- DỮ LIỆU SẢN PHẨM MẪU ---
         const SAMPLE_PRODUCTS = [
-            { id: 1, name: "Web Portfolio Cá Nhân", category: "Phát triển Web", desc: "Trang web giới thiệu bản thân cực đẹp với hiệu ứng chuyển động.", tech: "HTML, CSS, JS" },
-            { id: 2, name: "App Ghi Chú Thông Minh", category: "Ứng dụng", desc: "Ứng dụng giúp bạn quản lý công việc và ghi chú hằng ngày.", tech: "ReactJS, Firebase" },
-            { id: 3, name: "Hệ Thống Nhà Thông Minh", category: "IoT", desc: "Điều khiển đèn và thiết bị trong nhà qua điện thoại.", tech: "Arduino, ESP32" },
-            { id: 4, name: "Robot Tự Hành Tránh Vật Cản", category: "Phần cứng", desc: "Xe robot tự động tìm đường đi trong mê cung.", tech: "C++, Arduino" },
-            { id: 5, name: "Chatbot AI Hỗ Trợ Học Tập", category: "Trí tuệ nhân tạo", desc: "Robot trả lời câu hỏi bài tập tự động dựa trên GPT.", tech: "Python, OpenAI" },
-            { id: 6, name: "Game 2D Vượt Chướng Ngại Vật", category: "Trò chơi", desc: "Trò chơi giải trí vui nhộn với nhiều cấp độ khó khác nhau.", tech: "Unity, C#" }
+            { id: 1, name: "Web Portfolio Cá Nhân", category: "Phát triển Web", desc: "Trang web giới thiệu bản thân cực đẹp với hiệu ứng chuyển động.", tech: "HTML, CSS, JS", image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&q=80' },
+            { id: 2, name: "App Ghi Chú Thông Minh", category: "Ứng dụng", desc: "Ứng dụng giúp bạn quản lý công việc và ghi chú hằng ngày.", tech: "ReactJS, Firebase", image: 'https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?w=400&q=80' },
+            { id: 3, name: "Hệ Thống Nhà Thông Minh", category: "IoT", desc: "Điều khiển đèn và thiết bị trong nhà qua điện thoại.", tech: "Arduino, ESP32", image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80' },
+            { id: 4, name: "Robot Tự Hành Tránh Vật Cản", category: "Phần cứng", desc: "Xe robot tự động tìm đường đi trong mê cung.", tech: "C++, Arduino", image: 'https://images.unsplash.com/photo-1531746790731-6c087fecd65a?w=400&q=80' },
+            { id: 5, name: "Chatbot AI Hỗ Trợ Học Tập", category: "Trí tuệ nhân tạo", desc: "Robot trả lời câu hỏi bài tập tự động dựa trên GPT.", tech: "Python, OpenAI", image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&q=80' },
+            { id: 6, name: "Game 2D Vượt Chướng Ngại Vật", category: "Trò chơi", desc: "Trò chơi giải trí vui nhộn với nhiều cấp độ khó khác nhau.", tech: "Unity, C#", image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80' }
         ];
-        
+
         let tempSelectedAvatar = '';
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Will be overridden by Firebase auth listener
             checkLoginState();
         });
+
+        function setActiveNav(id) {
+            document.querySelectorAll('#header-user nav a').forEach(a => a.classList.remove('active-nav'));
+            const el = document.getElementById(id);
+            if (el) el.classList.add('active-nav');
+        }
 
         function showSection(id) {
             document.querySelectorAll('.section-content').forEach(el => el.classList.add('hidden'));
             const target = document.getElementById(id);
-            if(target) target.classList.remove('hidden');
-            
-            document.getElementById('user-dropdown').classList.add('hidden-dropdown');
-            document.getElementById('user-dropdown').classList.remove('visible-dropdown');
-
-            // Nếu vào kho sản phẩm, render lại nội dung
-            if(id === 'product-store') renderProducts();
+            if (target) {
+                target.classList.remove('hidden');
+                // Re-trigger animation
+                target.style.animation = 'none';
+                requestAnimationFrame(() => { target.style.animation = ''; });
+            }
+            const dd = document.getElementById('user-dropdown');
+            if (dd) { dd.classList.add('hidden-dropdown'); dd.classList.remove('visible-dropdown'); }
+            if (id === 'product-store') renderProducts();
+            if (id === 'user-dashboard') {
+                renderMyProjects();
+                setActiveNav('nav-my-projects');
+            }
+            // Show/hide community online indicator
+            const onlineCount = document.getElementById('comm-online-count');
+            if (onlineCount) {
+                if (id === 'community-section') {
+                    onlineCount.classList.add('comm-show');
+                } else {
+                    onlineCount.classList.remove('comm-show');
+                }
+            }
         }
 
-        // --- CHỨC NĂNG KHO SẢN PHẨM & TÌM KIẾM ---
         function renderProductStore() {
             showSection('product-store');
+            setActiveNav('nav-store');
         }
 
-        function renderProducts(filterData = SAMPLE_PRODUCTS) {
-            const grid = document.getElementById('product-display-grid');
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            grid.innerHTML = '';
+        function renderGuestHome() {
+            document.getElementById('header-guest').classList.remove('hidden');
+            document.getElementById('header-user').classList.add('hidden');
+            document.getElementById('main-footer').classList.remove('hidden');
+            showSection('guest-home');
+        }
 
-            filterData.forEach((p, index) => {
-                const isLocked = !currentUser && index >= 2; // Hiển thị 2, mờ từ cái thứ 3
-                
-                const card = document.createElement('div');
-                card.className = `product-card group ${isLocked ? 'relative' : ''}`;
-                
-                card.innerHTML = `
-                    <div class="${isLocked ? 'blur-max' : ''}">
-                        <div class="flex justify-between items-start mb-4">
-                            <span class="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded-full uppercase">${p.category}</span>
-                            <i class="fa-solid fa-code text-slate-700"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mt-1 group-hover:text-blue-400 transition-colors">${p.name}</h3>
-                        <p class="text-slate-400 text-sm mt-2 line-clamp-2">${p.desc}</p>
-                        <div class="mt-4 flex flex-wrap gap-2">
-                            <span class="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded">${p.tech}</span>
-                        </div>
-                        <button class="w-full mt-6 py-2 border border-slate-700 rounded-lg text-sm text-slate-300 group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white transition-all">Xem chi tiết</button>
-                    </div>
-                    ${isLocked ? `
-                        <div class="lock-overlay">
-                            <div class="bg-blue-600/20 w-12 h-12 rounded-full flex items-center justify-center mb-3">
-                                <i class="fa-solid fa-lock text-blue-500"></i>
+        function renderProducts() {
+            const grid = document.getElementById('product-display-grid');
+            grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-600"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block"></i>Đang tải dữ liệu...</div>';
+            if (typeof db === 'undefined') {
+                displayProductCards(SAMPLE_PRODUCTS, grid);
+                return;
+            }
+            db.collection('projects').orderBy('createdAt', 'desc').get().then((querySnapshot) => {
+                grid.innerHTML = '';
+                const products = [];
+                querySnapshot.forEach((doc) => { products.push({ id: doc.id, ...doc.data() }); });
+                const allProducts = [...products, ...SAMPLE_PRODUCTS];
+                displayProductCards(allProducts, grid);
+            }).catch(() => { displayProductCards(SAMPLE_PRODUCTS, grid); });
+        }
+
+        function displayProductCards(data, container) {
+            container.innerHTML = '';
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-12 text-slate-600">Không có dự án nào.</div>';
+                return;
+            }
+            data.forEach(p => {
+                container.innerHTML += `
+                    <div class="product-card">
+                        <div class="h-44 w-full mb-4 rounded-xl overflow-hidden relative group">
+                            <img src="${p.image || 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&q=80'}"
+                                 class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="${p.name}"
+                                 onerror="this.src='https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&q=80'">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                                ${p.fileUrl ? `<a href="${p.fileUrl}" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-blue-500 shadow-lg"><i class="fa-solid fa-play mr-1"></i> Mở File</a>` : ''}
                             </div>
-                            <p class="text-sm font-bold text-white px-4">Đăng nhập để xem sâu hơn</p>
-                            <p class="text-[10px] text-slate-400 mt-1 mb-4">Gia nhập TC3 để khám phá 100+ dự án</p>
-                            <button onclick="showSection('login-section')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-full font-bold transition-all shadow-lg">
-                                Đăng nhập ngay
-                            </button>
                         </div>
-                    ` : ''}
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-base font-bold text-white truncate w-3/4">${p.name}</h3>
+                            <span class="text-xs font-semibold px-2 py-1 rounded-lg bg-blue-900/40 text-blue-300 border border-blue-500/20">${p.tech}</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-2">${p.category || ''}</p>
+                        <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">${p.desc || ''}</p>
+                        ${p.author ? `<p class="text-xs text-slate-600 mt-3 flex items-center gap-1"><i class="fa-solid fa-user text-blue-400/40"></i> ${p.author}</p>` : ''}
+                    </div>
                 `;
-                
-                if (!isLocked) {
-                    card.onclick = () => showToast(`Bạn đang xem: ${p.name}`);
-                }
-                grid.appendChild(card);
             });
         }
 
-        // --- LOGIC TÌM KIẾM ---
+        /* ===== SEARCH ===== */
         function handleSearchInput(val) {
             const suggestionBox = document.getElementById('search-suggestions');
-            if (!val) {
-                suggestionBox.style.display = 'none';
-                return;
-            }
-
-            const matched = SAMPLE_PRODUCTS.filter(p => 
-                p.name.toLowerCase().includes(val.toLowerCase()) || 
+            if (!val) { suggestionBox.style.display = 'none'; return; }
+            const matched = SAMPLE_PRODUCTS.filter(p =>
+                p.name.toLowerCase().includes(val.toLowerCase()) ||
                 p.tech.toLowerCase().includes(val.toLowerCase())
             );
-            
             if (matched.length > 0) {
                 suggestionBox.innerHTML = matched.map(p => `
                     <div class="search-item" onclick="selectSearchItem('${p.name}')">
-                        <div class="font-bold">${p.name}</div>
-                        <div class="text-[10px] text-slate-500">${p.category} • ${p.tech}</div>
+                        <div class="font-semibold text-sm text-white">${p.name}</div>
+                        <div class="text-xs text-slate-500">${p.category} · ${p.tech}</div>
                     </div>
                 `).join('');
                 suggestionBox.style.display = 'block';
@@ -395,85 +1907,72 @@
         function selectSearchItem(name) {
             document.getElementById('product-search').value = name;
             document.getElementById('search-suggestions').style.display = 'none';
-            const selected = SAMPLE_PRODUCTS.filter(p => p.name === name);
-            renderProducts(selected);
+            displayProductCards(SAMPLE_PRODUCTS.filter(p => p.name === name), document.getElementById('product-display-grid'));
         }
 
         function handleSearchEnter(e) {
             if (e.key === 'Enter') {
                 const val = e.target.value.toLowerCase();
-                const results = SAMPLE_PRODUCTS.filter(p => 
-                    p.name.toLowerCase().includes(val) || 
-                    p.tech.toLowerCase().includes(val) ||
-                    p.category.toLowerCase().includes(val)
+                const results = SAMPLE_PRODUCTS.filter(p =>
+                    p.name.toLowerCase().includes(val) || p.tech.toLowerCase().includes(val) || (p.category || '').toLowerCase().includes(val)
                 );
-                renderProducts(results);
+                displayProductCards(results, document.getElementById('product-display-grid'));
                 document.getElementById('search-suggestions').style.display = 'none';
-                if(results.length === 0) showToast("Không tìm thấy kết quả phù hợp");
+                if (results.length === 0) showToast("Không tìm thấy kết quả phù hợp");
             }
         }
 
-        // --- CÁC CHỨC NĂNG HỆ THỐNG CŨ (GIỮ NGUYÊN & CẬP NHẬT) ---
+        /* ===== AUTH ===== */
         function checkLoginState() {
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            if (currentUser) {
-                renderUserInterface(currentUser);
-            } else {
-                renderGuestHome();
-            }
-        }
-
-        function renderGuestHome() {
-            document.getElementById('header-guest').classList.remove('hidden');
-            document.getElementById('header-user').classList.add('hidden');
-            document.getElementById('main-footer').classList.remove('hidden');
-            showSection('guest-home');
-        }
-
-        function handleLogin() {
-            const userInp = document.getElementById('login-user').value;
-            const passInp = document.getElementById('login-pass').value;
-            const savedData = JSON.parse(localStorage.getItem('savedUser'));
-
-            if (savedData && (userInp === savedData.username || userInp === savedData.email) && passInp === savedData.password) {
-                localStorage.setItem('currentUser', JSON.stringify(savedData));
-                showToast('Đăng nhập thành công!');
-                renderUserInterface(savedData);
-                renderProducts(); // Update lại trạng thái mờ của sản phẩm
-            } else {
-                alert("Thông tin đăng nhập không chính xác!");
-            }
+            if (currentUser) renderUserInterface(currentUser);
+            else renderGuestHome();
         }
 
         function handleRegister() {
             const user = document.getElementById('reg-user').value;
             const email = document.getElementById('reg-email').value;
             const pass = document.getElementById('reg-pass').value;
+            if (!user || !email || !pass) { alert("Vui lòng nhập đủ thông tin!"); return; }
+            if (typeof auth === 'undefined') { alert("Firebase chưa khởi tạo!"); return; }
+            auth.createUserWithEmailAndPassword(email, pass)
+                .then((userCredential) => {
+                    userCredential.user.updateProfile({ displayName: user, photoURL: AVATARS[0] }).then(() => {
+                        showToast('Đăng ký thành công!');
+                        db.collection('users').doc(userCredential.user.uid).set({ username: user, email: email, role: 'member' });
+                        showSection('user-dashboard');
+                    });
+                }).catch((error) => { alert("Lỗi đăng ký: " + error.message); });
+        }
 
-            if(user && email && pass) {
-                const userData = { username: user, email: email, password: pass, avatar: AVATARS[0] };
-                localStorage.setItem('savedUser', JSON.stringify(userData));
-                showToast('Đăng ký thành công!');
-                setTimeout(() => showSection('login-section'), 1000);
-            } else {
-                alert("Vui lòng nhập đủ thông tin!");
-            }
+        function handleLogin() {
+            const email = document.getElementById('login-user').value;
+            const pass = document.getElementById('login-pass').value;
+            if (typeof auth === 'undefined') { alert("Firebase chưa khởi tạo!"); return; }
+            auth.signInWithEmailAndPassword(email, pass)
+                .then(() => { showToast('Đăng nhập thành công!'); })
+                .catch((error) => { alert("Lỗi đăng nhập: " + error.message); });
         }
 
         function renderUserInterface(userData) {
             document.getElementById('header-guest').classList.add('hidden');
             document.getElementById('header-user').classList.remove('hidden');
             document.getElementById('header-username').textContent = userData.username;
-            document.getElementById('header-avatar').src = userData.avatar;
+            document.getElementById('header-avatar').src = userData.avatar || AVATARS[0];
             document.getElementById('dropdown-name').textContent = userData.username;
+            const welcomeEl = document.getElementById('welcome-username');
+            if (welcomeEl) welcomeEl.textContent = userData.username;
             document.getElementById('main-footer').classList.add('hidden');
             showSection('user-dashboard');
+            setActiveNav('nav-my-projects');
         }
 
         function toggleDropdown() {
             const dd = document.getElementById('user-dropdown');
+            const chevron = document.getElementById('dropdown-chevron');
             dd.classList.toggle('hidden-dropdown');
             dd.classList.toggle('visible-dropdown');
+            if (chevron) chevron.style.transform = dd.classList.contains('visible-dropdown') ? 'rotate(180deg)' : '';
         }
 
         function openProfilePage() {
@@ -481,19 +1980,17 @@
             if (!currentUser) return;
             document.getElementById('edit-name').value = currentUser.username;
             document.getElementById('edit-email').value = currentUser.email;
-            document.getElementById('profile-current-avatar').src = currentUser.avatar;
-            tempSelectedAvatar = currentUser.avatar;
-
+            document.getElementById('profile-current-avatar').src = currentUser.avatar || AVATARS[0];
+            tempSelectedAvatar = currentUser.avatar || AVATARS[0];
             const grid = document.getElementById('avatar-grid');
             grid.innerHTML = '';
             AVATARS.forEach(url => {
                 const img = document.createElement('img');
                 img.src = url;
-                img.className = `w-14 h-14 rounded-full cursor-pointer border-2 transition-all avatar-option ${url === currentUser.avatar ? 'selected border-blue-500' : 'border-transparent'}`;
+                img.className = `w-14 h-14 rounded-full cursor-pointer border-2 transition-all avatar-option ${url === currentUser.avatar ? 'border-blue-500' : 'border-transparent hover:border-slate-500'}`;
                 img.onclick = () => {
-                    document.querySelectorAll('.avatar-option').forEach(el => el.classList.replace('selected', 'border-transparent'));
-                    img.classList.replace('border-transparent', 'selected');
-                    img.classList.add('border-blue-500');
+                    document.querySelectorAll('.avatar-option').forEach(el => { el.classList.remove('border-blue-500'); el.classList.add('border-transparent'); });
+                    img.classList.remove('border-transparent'); img.classList.add('border-blue-500');
                     document.getElementById('profile-current-avatar').src = url;
                     tempSelectedAvatar = url;
                 };
@@ -505,46 +2002,26 @@
         function preSaveCheck() { document.getElementById('save-modal').classList.remove('hidden'); }
 
         function performSaveProfile() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-
-    const newPassword = document.getElementById('edit-password').value;
-    const confirmPassword = document.getElementById('edit-password-confirm').value;
-
-    // Nếu người dùng có nhập mật khẩu
-    if (newPassword || confirmPassword) {
-        if (newPassword.length < 6) {
-            alert("Mật khẩu phải có ít nhất 6 ký tự");
-            return;
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            const newPassword = document.getElementById('edit-password').value;
+            const confirmPassword = document.getElementById('edit-password-confirm').value;
+            if (newPassword || confirmPassword) {
+                if (newPassword.length < 6) { alert("Mật khẩu phải có ít nhất 6 ký tự"); return; }
+                if (newPassword !== confirmPassword) { alert("Mật khẩu xác nhận không khớp"); return; }
+            }
+            const updatedUser = { ...currentUser, username: document.getElementById('edit-name').value, email: document.getElementById('edit-email').value, avatar: tempSelectedAvatar, password: newPassword ? newPassword : currentUser.password };
+            localStorage.setItem('savedUser', JSON.stringify(updatedUser));
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            document.getElementById('edit-password').value = '';
+            document.getElementById('edit-password-confirm').value = '';
+            closeModal('save-modal');
+            showToast('Cập nhật hồ sơ thành công!');
         }
-        if (newPassword !== confirmPassword) {
-            alert("Mật khẩu xác nhận không khớp");
-            return;
-        }
-    }
-
-    const updatedUser = {
-        ...currentUser,
-        username: document.getElementById('edit-name').value,
-        email: document.getElementById('edit-email').value,
-        avatar: tempSelectedAvatar,
-        password: newPassword ? newPassword : currentUser.password
-    };
-
-    localStorage.setItem('savedUser', JSON.stringify(updatedUser));
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-    // Clear input mật khẩu sau khi lưu
-    document.getElementById('edit-password').value = '';
-    document.getElementById('edit-password-confirm').value = '';
-
-    closeModal('save-modal');
-    showToast('Cập nhật hồ sơ thành công!');
-    renderUserInterface(updatedUser);
-}
-
 
         function confirmLogout() { document.getElementById('logout-modal').classList.remove('hidden'); }
+
         function performLogout() {
+            if (typeof auth !== 'undefined') auth.signOut();
             localStorage.removeItem('currentUser');
             closeModal('logout-modal');
             renderGuestHome();
@@ -553,20 +2030,617 @@
 
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-        function showToast(message) {
+        function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
+            const icon = toast.querySelector('i');
             document.getElementById('toast-msg').innerText = message;
+            icon.className = type === 'error' ? 'fa-solid fa-circle-xmark text-red-400' : 'fa-solid fa-circle-check text-green-400';
             toast.classList.remove('translate-x-[150%]');
-            setTimeout(() => toast.classList.add('translate-x-[150%]'), 3000);
+            setTimeout(() => toast.classList.add('translate-x-[150%]'), 3500);
         }
 
         window.onclick = function(event) {
             if (!event.target.closest('.relative') && !event.target.closest('#user-dropdown')) {
-                document.getElementById('user-dropdown').classList.add('hidden-dropdown');
-                document.getElementById('user-dropdown').classList.remove('visible-dropdown');
+                const dd = document.getElementById('user-dropdown');
+                if (dd) { dd.classList.add('hidden-dropdown'); dd.classList.remove('visible-dropdown'); }
             }
-        }
+        };
     </script>
+
+    <!-- ===================================================================
+         COMMUNITY MODULE SCRIPT
+         All functions prefixed "comm" — zero impact on existing code.
+         Activated only after Firebase confirms user is logged in.
+    ==================================================================== -->
+    <script>
+    // ── Config (edit these to match your backend) ──────────────────────
+    const COMM_API_BASE  = 'http://localhost:4000';
+    const COMM_SOCKET_URL = 'http://localhost:4000';
+
+    // ── Guard: require login before showing community ──────────────────
+    function commRequireLogin() {
+        const cu = JSON.parse(localStorage.getItem('currentUser'));
+        if (!cu) {
+            showSection('login-section');
+            commShowToast('⚠️ Vui lòng đăng nhập để dùng tính năng cộng đồng!', 'error');
+            return false;
+        }
+        showSection('community-section');
+        return true;
+    }
+
+    // ── View navigation (community sub-views) ─────────────────────────
+    function showCommView(name) {
+        // Make sure community-section is visible
+        showSection('community-section');
+        document.querySelectorAll('.comm-view').forEach(v => v.classList.remove('comm-active'));
+        const el = document.getElementById('comm-view-' + name);
+        if (el) el.classList.add('comm-active');
+        // Trigger data loads
+        if (name === 'community')   { commLoadLeaderboardMini(); commLoadPosts(); }
+        if (name === 'forum')       { commLoadForumPosts(); }
+        if (name === 'timeline')    { commLoadTimeline(); }
+        if (name === 'leaderboard') { commLoadLeaderboardFull(); }
+        if (name === 'share')       { commLoadShareList(); }
+        if (name === 'chat')        { /* chat loads on socket connect */ }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────
+    function commGetUser() {
+        return JSON.parse(localStorage.getItem('currentUser')) || { username: 'TC3 Member', uid: 'guest' };
+    }
+
+    async function commApi(method, path, body) {
+        const opts = { method, headers: { 'Content-Type': 'application/json' } };
+        if (body) opts.body = JSON.stringify(body);
+        try {
+            const r = await fetch(COMM_API_BASE + path, opts);
+            return await r.json();
+        } catch (e) {
+            return null; // demo/offline mode
+        }
+    }
+
+    function commTimeAgo(date) {
+        if (!date) return '';
+        const d = date instanceof Date ? date : new Date(date);
+        const diff = (Date.now() - d.getTime()) / 1000;
+        if (diff < 60) return 'vừa xong';
+        if (diff < 3600) return Math.floor(diff / 60) + ' phút trước';
+        if (diff < 86400) return Math.floor(diff / 3600) + ' giờ trước';
+        return Math.floor(diff / 86400) + ' ngày trước';
+    }
+
+    function commEscHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    let commToastTimer;
+    function commShowToast(msg, type = 'success') {
+        const t = document.getElementById('comm-toast');
+        if (!t) return;
+        t.textContent = msg;
+        t.className = `comm-show comm-${type}`;
+        clearTimeout(commToastTimer);
+        commToastTimer = setTimeout(() => t.classList.remove('comm-show'), 3200);
+    }
+
+    // ── Socket.io (community-only socket) ─────────────────────────────
+    let commSocket;
+    (function initCommSocket() {
+        try {
+            commSocket = io(COMM_SOCKET_URL, { transports: ['websocket', 'polling'], autoConnect: false });
+
+            commSocket.on('chat:history', msgs => {
+                msgs.forEach(m => commAppendChatMsg(m, 'comm-mini-chat-box'));
+                msgs.forEach(m => commAppendChatMsg(m, 'comm-chat-full-box'));
+                commScrollChat('comm-mini-chat-box');
+                commScrollChat('comm-chat-full-box');
+            });
+            commSocket.on('chat:message', msg => {
+                commAppendChatMsg(msg, 'comm-mini-chat-box');
+                commAppendChatMsg(msg, 'comm-chat-full-box');
+                commScrollChat('comm-mini-chat-box');
+                commScrollChat('comm-chat-full-box');
+            });
+            commSocket.on('timeline:new', item => commPrependTimeline(item));
+            commSocket.on('timeline:batch', items => {
+                items.forEach(item => { if (!document.getElementById('ctli-' + item.id)) commPrependTimeline(item); });
+            });
+            commSocket.on('post:new', () => commLoadPosts());
+            commSocket.on('connect', () => {
+                const oc = document.getElementById('comm-online-count');
+                if (oc) oc.textContent = (Math.floor(Math.random() * 8) + 2) + ' online';
+            });
+        } catch(e) {
+            commSocket = { emit: () => {}, connected: false };
+        }
+    })();
+
+    // Connect socket only when community section is first opened
+    let _commSocketConnected = false;
+    function commEnsureSocket() {
+        if (!_commSocketConnected && commSocket && commSocket.connect) {
+            commSocket.connect();
+            _commSocketConnected = true;
+        }
+    }
+
+    // ── LEADERBOARD ───────────────────────────────────────────────────
+    const COMM_DEMO_LB = [
+        { username:'Nguyễn Minh An',  points:142, avatar:'' },
+        { username:'Trần Thu Hà',      points:118, avatar:'' },
+        { username:'Lê Quốc Huy',     points:95,  avatar:'' },
+        { username:'Phạm Yến Linh',   points:73,  avatar:'' },
+        { username:'Võ Bảo Châu',     points:61,  avatar:'' },
+    ];
+
+    async function commLoadLeaderboardMini() {
+        const data = await commApi('GET', '/api/leaderboard') || { top: COMM_DEMO_LB };
+        const el = document.getElementById('comm-lb-mini');
+        if (!el) return;
+        el.innerHTML = '';
+        (data.top || []).forEach((u, i) => {
+            const rc = i===0?'comm-rank-1':i===1?'comm-rank-2':i===2?'comm-rank-3':'comm-rank-other';
+            const ini = (u.username||u.name||'?')[0].toUpperCase();
+            el.innerHTML += `
+              <div class="comm-lb-row">
+                <div class="comm-lb-rank ${rc}">${i+1}</div>
+                <div class="comm-lb-ava">${u.avatar?`<img src="${u.avatar}">`:'<span style="color:#fff">'+ini+'</span>'}</div>
+                <div class="comm-lb-info">
+                  <div class="comm-lb-name">${u.username||u.name||'Thành viên'}</div>
+                  <div class="comm-lb-pts">${u.points||0} điểm</div>
+                </div>
+                <div class="comm-lb-badge">${['🥇','🥈','🥉','⭐','⭐'][i]}</div>
+              </div>`;
+        });
+    }
+
+    async function commLoadLeaderboardFull() {
+        const now = new Date();
+        const lbl = document.getElementById('comm-lb-month-label');
+        if (lbl) lbl.textContent = `Tháng ${now.getMonth()+1}/${now.getFullYear()}`;
+        const data = await commApi('GET', '/api/leaderboard') || { top: COMM_DEMO_LB };
+        const el = document.getElementById('comm-lb-full-list');
+        if (!el) return;
+        el.innerHTML = '';
+        const maxPts = (data.top[0]||{}).points || 1;
+        (data.top||[]).forEach((u, i) => {
+            const rc = ['comm-rank-gold','comm-rank-silver','comm-rank-bronze','',''][i];
+            const ini = (u.username||u.name||'?')[0].toUpperCase();
+            const pct = Math.round(((u.points||0)/maxPts)*100);
+            el.innerHTML += `
+              <div class="comm-lb-full-row">
+                <div class="comm-lb-full-rank ${rc}">${['🥇','🥈','🥉','4','5'][i]}</div>
+                <div class="comm-lb-full-ava">${u.avatar?`<img src="${u.avatar}">`:'<span style="color:#fff">'+ini+'</span>'}</div>
+                <div class="comm-lb-full-info">
+                  <div class="comm-lb-full-name">${u.username||u.name||'Thành viên'}</div>
+                  <div class="comm-lb-full-sub">Thành viên TC3 TECH-HUB</div>
+                  <div class="comm-progress-bar"><div class="comm-progress-fill" style="width:${pct}%"></div></div>
+                </div>
+                <div class="comm-lb-full-pts">${u.points||0} điểm</div>
+              </div>`;
+        });
+    }
+
+    // ── POSTS ─────────────────────────────────────────────────────────
+    let commCurrentPosts = [];
+    let commPostLastId   = null;
+    let commCurrentTags  = [];
+    let commShowCode     = false;
+    let commUploadedImg  = '';
+
+    const COMM_DEMO_POSTS = [
+        { id:'cd1', title:'Làm sao để học JavaScript nhanh?', content:'Mình đang học JS nhưng thấy khá khó, đặc biệt là phần async/await. Có ai có kinh nghiệm học JS hiệu quả không ạ?', tags:['js','question'], authorName:'Nguyễn Minh An', avatar:'', likes:12, comments:3, createdAt:new Date(Date.now()-3600000), codeSnippet:"async function fetchData() {\n  const res = await fetch('/api/data');\n  return res.json();\n}", imageURL:'' },
+        { id:'cd2', title:'Project Scratch Game — Flappy Bird!', content:'Mình vừa hoàn thành game Flappy Bird bằng Scratch! Mất 2 tuần để làm xong với đầy đủ tính năng: điểm số, hiệu ứng âm thanh và màn hình game over.', tags:['scratch','share'], authorName:'Trần Thu Hà', avatar:'', likes:28, comments:7, createdAt:new Date(Date.now()-7200000), codeSnippet:'', imageURL:'' },
+        { id:'cd3', title:'Python cho người mới bắt đầu — Resources hay', content:'List các resource học Python miễn phí mà mình thấy hiệu quả nhất:\n1. CS50P của Harvard\n2. Python.org docs chính thức\n3. Automate the Boring Stuff', tags:['python'], authorName:'Lê Quốc Huy', avatar:'', likes:45, comments:11, createdAt:new Date(Date.now()-86400000), codeSnippet:"print('TC3 TECH-HUB 11A1 🚀')\nfor i in range(5):\n    print(f'Bước {i+1}')", imageURL:'' }
+    ];
+
+    function commPreviewImg(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            commUploadedImg = e.target.result;
+            const prev = document.getElementById('comm-c-img-preview');
+            if (prev) { prev.src = commUploadedImg; prev.classList.add('show'); }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function commToggleCode() {
+        commShowCode = !commShowCode;
+        const el = document.getElementById('comm-c-code');
+        if (el) el.style.display = commShowCode ? 'block' : 'none';
+        const btn = document.getElementById('comm-code-toggle');
+        if (btn) btn.classList.toggle('comm-active', commShowCode);
+    }
+
+    function commAddTag(event) {
+        if (event.key !== 'Enter') return;
+        const input = document.getElementById('comm-tag-input');
+        const tag = (input.value||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+        if (!tag || commCurrentTags.includes(tag)) { input.value = ''; return; }
+        commCurrentTags.push(tag);
+        input.value = '';
+        commRenderTagChips();
+    }
+
+    function commRenderTagChips() {
+        const row = document.getElementById('comm-tags-row');
+        if (!row) return;
+        row.querySelectorAll('.comm-tag-chip').forEach(c => c.remove());
+        commCurrentTags.forEach(tag => {
+            const chip = document.createElement('span');
+            chip.className = 'comm-tag-chip';
+            chip.innerHTML = `#${tag} <span class="ctrm" onclick="commRemoveTag('${tag}')">✕</span>`;
+            row.insertBefore(chip, document.getElementById('comm-tag-input'));
+        });
+    }
+
+    function commRemoveTag(tag) {
+        commCurrentTags = commCurrentTags.filter(t => t !== tag);
+        commRenderTagChips();
+    }
+
+    async function commSubmitPost() {
+        const cu = commGetUser();
+        const title   = (document.getElementById('comm-c-title')||{}).value?.trim();
+        const content = (document.getElementById('comm-c-content')||{}).value?.trim();
+        if (!title || !content) { commShowToast('⚠️ Nhập tiêu đề và nội dung!','error'); return; }
+
+        const postData = {
+            title, content,
+            tags: [...commCurrentTags],
+            imageURL: commUploadedImg,
+            codeSnippet: (document.getElementById('comm-c-code')||{}).value?.trim() || ''
+        };
+
+        // Optimistic UI — add locally right away
+        const localPost = { id:'lp_'+Date.now(), ...postData, authorName:cu.username, avatar:cu.avatar||'', likes:0, comments:0, createdAt:new Date() };
+        commCurrentPosts.unshift(localPost);
+        commRenderPost(localPost, 'comm-post-feed', true);
+        commRenderPost(localPost, 'comm-forum-feed', true);
+
+        // Reset form
+        ['comm-c-title','comm-c-content','comm-c-code'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+        commUploadedImg = ''; commCurrentTags = []; commRenderTagChips();
+        const prev = document.getElementById('comm-c-img-preview');
+        if (prev) { prev.src=''; prev.classList.remove('show'); }
+
+        commShowToast('🚀 Đăng bài thành công! +5 điểm', 'success');
+
+        // Try API
+        await commApi('POST', '/api/posts', postData);
+    }
+
+    async function commLoadPosts(tag) {
+        const container = document.getElementById('comm-post-feed');
+        if (!container) return;
+        if (!commCurrentPosts.length) container.innerHTML = `<div style="padding:20px;text-align:center;color:#6b7280"><div class="comm-spinner"></div></div>`;
+        const qs = tag ? `?tag=${tag}` : '';
+        const data = await commApi('GET', '/api/posts' + qs);
+        const posts = data?.posts || COMM_DEMO_POSTS;
+        commCurrentPosts = posts;
+        commPostLastId = data?.nextId;
+        container.innerHTML = '';
+        posts.forEach(p => commRenderPost(p, 'comm-post-feed'));
+        const btn = document.getElementById('comm-load-more-btn');
+        if (btn) btn.style.display = commPostLastId ? 'block' : 'none';
+    }
+
+    async function commLoadForumPosts(tag) {
+        const container = document.getElementById('comm-forum-feed');
+        if (!container) return;
+        container.innerHTML = `<div style="padding:20px;text-align:center;color:#6b7280"><div class="comm-spinner"></div></div>`;
+        const qs = tag ? `?tag=${tag}` : '';
+        const data = await commApi('GET', '/api/posts' + qs);
+        const posts = data?.posts || COMM_DEMO_POSTS;
+        container.innerHTML = '';
+        posts.forEach(p => commRenderPost(p, 'comm-forum-feed'));
+    }
+
+    async function commLoadMorePosts() {
+        if (!commPostLastId) return;
+        const data = await commApi('GET', `/api/posts?lastId=${commPostLastId}`);
+        if (data?.posts) {
+            data.posts.forEach(p => { commCurrentPosts.push(p); commRenderPost(p, 'comm-post-feed'); });
+            commPostLastId = data.nextId;
+        }
+        const btn = document.getElementById('comm-load-more-btn');
+        if (btn && !commPostLastId) btn.style.display = 'none';
+    }
+
+    function commFilterPosts(tag, btn) {
+        document.querySelectorAll('#comm-filter-bar .comm-filter-tag').forEach(b => b.classList.remove('comm-active'));
+        btn.classList.add('comm-active');
+        commLoadPosts(tag);
+    }
+
+    function commFilterForumPosts(tag, btn) {
+        document.querySelectorAll('#comm-forum-filter-bar .comm-filter-tag').forEach(b => b.classList.remove('comm-active'));
+        btn.classList.add('comm-active');
+        commLoadForumPosts(tag);
+    }
+
+    function commRenderPost(p, containerId, prepend = false) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const ini = (p.authorName||'?')[0].toUpperCase();
+        const tagsHtml = (p.tags||[]).map(t => `<span class="comm-p-tag">#${t}</span>`).join('');
+        const el = document.createElement('div');
+        el.className = 'comm-post-card';
+        el.id = 'cpost-' + p.id;
+        el.innerHTML = `
+          <div class="comm-post-head">
+            <div class="comm-post-avatar">${p.avatar?`<img src="${p.avatar}">`:'<span style="color:#fff">'+ini+'</span>'}</div>
+            <div class="comm-post-meta">
+              <div class="comm-post-author">${p.authorName||'Thành viên'}</div>
+              <div class="comm-post-time">${commTimeAgo(p.createdAt)}</div>
+            </div>
+            <div class="comm-post-tags-top">${tagsHtml}</div>
+          </div>
+          <div class="comm-post-body">
+            <div class="comm-post-title">${p.title}</div>
+            <div class="comm-post-content">${p.content||''}</div>
+            ${p.imageURL?`<img src="${p.imageURL}" class="comm-post-image" onerror="this.style.display='none'">`:''}
+            ${p.codeSnippet?`<div class="comm-post-code">${commEscHtml(p.codeSnippet)}</div>`:''}
+          </div>
+          <div class="comm-post-actions">
+            <button class="comm-act-btn" id="comm-like-${p.id}" onclick="commLikePost('${p.id}',this)">
+              ❤️ Thích <span>${p.likes||0}</span>
+            </button>
+            <button class="comm-act-btn" onclick="commToggleComments('${p.id}')">
+              💬 Bình luận <span>${p.comments||0}</span>
+            </button>
+            <button class="comm-act-btn" onclick="commSharePostLink('${p.id}')">
+              🔗 Chia sẻ
+            </button>
+          </div>
+          <div class="comm-comments-area" id="ccmt-${p.id}">
+            <div id="ccmt-list-${p.id}"></div>
+            <div class="comm-add-comment-row">
+              <input class="comm-cmt-input" id="ccmt-input-${p.id}" placeholder="Viết bình luận..." onkeydown="if(event.key==='Enter')commAddComment('${p.id}')"/>
+              <button class="comm-cmt-send" onclick="commAddComment('${p.id}')">Gửi</button>
+            </div>
+          </div>`;
+        if (prepend && container.firstChild) container.insertBefore(el, container.firstChild);
+        else container.appendChild(el);
+    }
+
+    async function commLikePost(postId, btn) {
+        btn.classList.add('comm-liked');
+        const span = btn.querySelector('span');
+        if (span) span.textContent = parseInt(span.textContent||0)+1;
+        await commApi('POST', `/api/posts/${postId}/like`);
+    }
+
+    async function commToggleComments(postId) {
+        const area = document.getElementById('ccmt-' + postId);
+        if (!area) return;
+        if (area.classList.contains('open')) { area.classList.remove('open'); return; }
+        area.classList.add('open');
+        const data = await commApi('GET', `/api/posts/${postId}`);
+        const list = document.getElementById('ccmt-list-' + postId);
+        if (list) { list.innerHTML = ''; (data?.comments||[]).forEach(c => commAppendComment(c, postId)); }
+    }
+
+    function commAppendComment(c, postId) {
+        const list = document.getElementById('ccmt-list-' + postId);
+        if (!list) return;
+        const ini = (c.authorName||'?')[0].toUpperCase();
+        const el = document.createElement('div');
+        el.className = 'comm-comment-item';
+        el.innerHTML = `
+          <div class="comm-cmt-ava">${c.avatar?`<img src="${c.avatar}">`:'<span style="color:#fff">'+ini+'</span>'}</div>
+          <div class="comm-cmt-body">
+            <div class="comm-cmt-name">${c.authorName||'Thành viên'}</div>
+            <div class="comm-cmt-text">${c.content}</div>
+            <div class="comm-cmt-likes" onclick="commLikeComment('${postId}','${c.id}',this)">👍 ${c.likes||0}</div>
+          </div>`;
+        list.appendChild(el);
+    }
+
+    async function commAddComment(postId) {
+        const input = document.getElementById('ccmt-input-' + postId);
+        const content = (input?.value||'').trim();
+        if (!content) return;
+        input.value = '';
+        const cu = commGetUser();
+        commAppendComment({ id:'cc_'+Date.now(), content, authorName:cu.username, avatar:cu.avatar||'', likes:0 }, postId);
+        const btn = document.querySelector(`#cpost-${postId} .comm-act-btn:nth-child(2) span`);
+        if (btn) btn.textContent = parseInt(btn.textContent||0)+1;
+        await commApi('POST', `/api/posts/${postId}/comments`, { content });
+        commShowToast('💬 Đã gửi bình luận! +2 điểm', 'success');
+    }
+
+    async function commLikeComment(postId, cid, el) {
+        el.textContent = '👍 ' + (parseInt(el.textContent.replace('👍 ','')||0)+1);
+        await commApi('POST', `/api/posts/${postId}/comments/${cid}/like`);
+    }
+
+    function commSharePostLink(postId) {
+        const url = window.location.href.split('#')[0] + '#cpost=' + postId;
+        navigator.clipboard?.writeText(url).then(() => commShowToast('🔗 Đã sao chép link!','success'));
+    }
+
+    // ── TIMELINE ──────────────────────────────────────────────────────
+    const COMM_DEMO_TL = [
+        { id:'ct1', type:'post',   userName:'Nguyễn Minh An', message:'đã đăng bài: "Cách học JS hiệu quả"',     createdAt:new Date(Date.now()-120000) },
+        { id:'ct2', type:'share',  userName:'Trần Thu Hà',     message:'đã chia sẻ dự án: "Flappy Bird Scratch"', createdAt:new Date(Date.now()-3600000) },
+        { id:'ct3', type:'upload', userName:'Lê Quốc Huy',    message:'đã tải lên project mới: "Calculator Python"', createdAt:new Date(Date.now()-7200000) },
+    ];
+    const COMM_TL_ICONS = { post:'✍️', share:'🔗', upload:'📦', comment:'💬', like:'❤️' };
+
+    async function commLoadTimeline() {
+        const container = document.getElementById('comm-timeline-feed');
+        if (!container) return;
+        const data = await commApi('GET', '/api/timeline');
+        const items = data?.items || COMM_DEMO_TL;
+        container.innerHTML = '';
+        items.forEach(item => commPrependTimeline(item));
+    }
+
+    function commPrependTimeline(item) {
+        const container = document.getElementById('comm-timeline-feed');
+        if (!container || document.getElementById('ctli-'+item.id)) return;
+        const el = document.createElement('div');
+        el.className = 'comm-tl-item';
+        el.id = 'ctli-' + item.id;
+        el.innerHTML = `
+          <div class="comm-tl-icon ${item.type||'post'}">${COMM_TL_ICONS[item.type]||'🔔'}</div>
+          <div class="comm-tl-body">
+            <div class="comm-tl-msg"><strong>${item.userName||'Thành viên'}</strong> ${item.message||''}</div>
+            <div class="comm-tl-time">${commTimeAgo(item.createdAt||new Date())}</div>
+          </div>`;
+        if (container.firstChild) container.insertBefore(el, container.firstChild);
+        else container.appendChild(el);
+        // Remove loading spinner if present
+        const sp = container.querySelector('.comm-spinner');
+        if (sp && sp.parentElement !== el) sp.parentElement?.remove();
+    }
+
+    // ── LIVE CHAT ─────────────────────────────────────────────────────
+    function commAppendChatMsg(msg, boxId) {
+        const box = document.getElementById(boxId);
+        if (!box) return;
+        const cu = commGetUser();
+        const isMe = msg.userId === cu.uid;
+        const ini = (msg.userName||'?')[0].toUpperCase();
+        const el = document.createElement('div');
+        el.className = 'comm-chat-msg' + (isMe ? ' comm-me' : '');
+        el.innerHTML = `
+          <div class="cc-ava">${ini}</div>
+          <div class="cc-body">
+            <div class="cc-name">${msg.userName||'Thành viên'}</div>
+            <div class="cc-text">${msg.text||''}</div>
+          </div>`;
+        box.appendChild(el);
+    }
+
+    function commScrollChat(id) {
+        const box = document.getElementById(id);
+        if (box) box.scrollTop = box.scrollHeight;
+    }
+
+    function _commSendChat(inputId) {
+        const input = document.getElementById(inputId);
+        const text = (input?.value||'').trim();
+        if (!text) return;
+        input.value = '';
+        const cu = commGetUser();
+        commEnsureSocket();
+        const msg = { text, userName:cu.username, userId:cu.uid, avatar:cu.avatar||'', ts:new Date().toISOString(), id:Date.now().toString() };
+        if (commSocket && commSocket.emit) commSocket.emit('chat:send', msg);
+        // Optimistic (offline/no socket)
+        if (!commSocket.connected) {
+            commAppendChatMsg(msg, 'comm-mini-chat-box');
+            commAppendChatMsg(msg, 'comm-chat-full-box');
+            commScrollChat('comm-mini-chat-box');
+            commScrollChat('comm-chat-full-box');
+        }
+    }
+
+    function commSendMiniChat() { _commSendChat('comm-mini-chat-input'); }
+    function commSendFullChat()  { _commSendChat('comm-chat-full-input'); }
+
+    // ── SHARE PROJECT (list user's own projects) ───────────────────────
+    async function commLoadShareList() {
+        const container = document.getElementById('comm-share-project-list');
+        if (!container) return;
+        // Load from Firebase (if available) or show demo
+        let projects = [];
+        if (typeof db !== 'undefined') {
+            try {
+                const cu = commGetUser();
+                const snap = await db.collection('projects').where('authorId','==',cu.uid).get();
+                snap.forEach(doc => projects.push({ id:doc.id, ...doc.data() }));
+            } catch(e) {}
+        }
+        if (!projects.length) {
+            projects = [
+                { id:'cp1', name:'Flappy Bird Scratch', tech:'Scratch' },
+                { id:'cp2', name:'Calculator Python',   tech:'Python'  },
+            ];
+        }
+        container.innerHTML = projects.length
+            ? '<p style="font-size:0.8rem;color:#6b7280;margin-bottom:12px">Chọn dự án bên dưới để chia sẻ lên cộng đồng:</p>'
+            : '<p style="text-align:center;color:#6b7280;padding:24px;font-size:0.85rem">Bạn chưa có dự án nào.</p>';
+        projects.forEach(p => {
+            const row = document.createElement('div');
+            row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;margin-bottom:9px;';
+            row.innerHTML=`<div><div style="font-weight:700;font-size:0.88rem;color:#e8eaf0">${p.name}</div><div style="font-size:0.73rem;color:#6b7280">${p.tech||''}</div></div>
+              <button class="comm-post-btn" style="font-size:0.78rem;padding:7px 16px" onclick="commShareProject('${p.id}','${p.name}')">🚀 Chia sẻ</button>`;
+            container.appendChild(row);
+        });
+    }
+
+    async function commShareProject(id, name) {
+        await commApi('POST', `/api/projects/${id}/share`);
+        commShowToast(`🚀 Đã chia sẻ dự án "${name}" lên cộng đồng!`, 'success');
+    }
+
+    // ── Connect socket when community section is first activated ──────
+    // (hooked via showSection override below)
+    const _origShowSection = showSection;
+    window.showSection = function(id) {
+        _origShowSection(id);
+        if (id === 'community-section') {
+            commEnsureSocket();
+            // Default to community home if no sub-view active
+            const anyActive = document.querySelector('.comm-view.comm-active');
+            if (!anyActive) showCommView('community');
+        }
+    };
+    </script>
+
+    <!-- ===== EXISTING SCRIPTS (untouched) ===== -->
     <script src="my-projects.js"></script>
+
+    <!-- ===== FIREBASE ===== -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+
+    <script src="my-projects-v2.js"></script>
+
+    <!-- ===== NEW ENHANCEMENT SCRIPTS ===== -->
+    <script src="vibe-animations.js"></script>
+    <script src="demo-renderer.js"></script>
+
+    <!-- ===== FIREBASE CONFIG ===== -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCg6YuV4Bi1baj0uGymBUANhZ9WqDfgXS4",
+            authDomain: "my-web-2b363.firebaseapp.com",
+            projectId: "my-web-2b363",
+            storageBucket: "my-web-2b363.firebasestorage.app",
+            messagingSenderId: "227910428181",
+            appId: "1:227910428181:web:ec68c383aa20bab192101c",
+            measurementId: "G-676GL2CFWJ"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        /* ===== AUTH STATE LISTENER ===== */
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                const userData = {
+                    username: user.displayName || 'TC3 Member',
+                    email: user.email,
+                    avatar: user.photoURL || AVATARS[0],
+                    uid: user.uid
+                };
+                localStorage.setItem('currentUser', JSON.stringify(userData));
+                renderUserInterface(userData);
+            } else {
+                localStorage.removeItem('currentUser');
+                renderGuestHome();
+            }
+        });
+    </script>
 </body>
 </html>
